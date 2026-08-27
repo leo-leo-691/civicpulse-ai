@@ -7,12 +7,28 @@ from datetime import datetime
 class ExtractedCitizenRequest(BaseModel):
     category: str = Field(..., description="Primary category: Road Infrastructure, Water, Health, Education, Electricity, Public Transport")
     subcategory: str = Field(..., description="Subcategory: e.g. Drinking Water, Rural Road Connectivity, School Infrastructure")
-    severity: str = Field(..., description="Severity level: low, medium, high, critical")
-    urgency: str = Field(..., description="Urgency level: low, medium, high, critical")
+    severity: str = Field(default="medium", description="Severity level: low, medium, high, critical")
+    urgency: str = Field(default="medium", description="Urgency level: low, medium, high, critical")
     affected_groups: List[str] = Field(default_factory=list, description="Groups affected, e.g. children, elderly, farmers")
     issue_summary: str = Field(..., description="Clean concise summary of the issue")
-    potential_impact: str = Field(..., description="Impact on community")
+    potential_impact: str = Field(default="", description="Impact on community")
     location_mentions: List[str] = Field(default_factory=list, description="Mentioned villages, districts, or landmarks")
+    language_detected: Optional[str] = Field(default="en", description="ISO language code detected: en, hi, mr, pt")
+    translated_text: Optional[str] = Field(default=None, description="Normalized or translated English text")
+    model_confidence: Optional[float] = Field(default=None, description="Defensible model confidence score if provided by model, else None")
+    provider_status: str = Field(default="DEVELOPMENT FALLBACK", description="REAL, DEVELOPMENT FALLBACK, or UNAVAILABLE")
+
+class GroundedRecommendation(BaseModel):
+    cluster_id: int
+    proposed_intervention: str
+    priority_score: float
+    digital_access_correction: float = 0.0
+    evidence_references: List[str] = Field(default_factory=list)
+    referenced_population: Optional[int] = None
+    referenced_villages: Optional[int] = None
+    referenced_infrastructure_gap: Optional[float] = None
+    validation_status: str = Field(default="VALIDATED", description="VALIDATED or REJECTED_UNSUPPORTED_CLAIMS")
+
 
 # --- API Endpoints Request / Response Schemas ---
 

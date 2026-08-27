@@ -25,6 +25,8 @@ class BaseSpeechProvider(ABC):
 
 # --- Gemini Provider Implementation ---
 
+# --- Provider Implementation ---
+
 class GeminiLLMProvider(BaseLLMProvider):
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -37,8 +39,8 @@ class GeminiLLMProvider(BaseLLMProvider):
             except Exception:
                 self._client = None
 
-    def extract_structured(self, text: str, language: str) -> ExtractedCitizenRequest:
-        if self._client:
+    def extract_structured(self, text: str, language: str = "en") -> ExtractedCitizenRequest:
+        if self._client and text and text.strip():
             prompt = f"""
             You are a public infrastructure request extraction AI for BRICS governance.
             Extract structured data from the following citizen report (Language: {language}).
@@ -60,29 +62,34 @@ class GeminiLLMProvider(BaseLLMProvider):
                 response = self._client.generate_content(prompt)
                 clean_json = response.text.replace("```json", "").replace("```", "").strip()
                 data = json.loads(clean_json)
-                return ExtractedCitizenRequest(**data)
-            except Exception as e:
-                pass # Fallback to local heuristic parser
+                req = ExtractedCitizenRequest(**data)
+                req.language_detected = language
+                req.translated_text = req.issue_summary
+                req.model_confidence = None  # Model confidence is unavailable unless explicitly scored
+                req.provider_status = "REAL"
+                return req
+            except Exception:
+                pass  # Graceful fallback to heuristic parser
 
-        # Robust Heuristic Local Parser (Offline / Provider Fallback)
-        lower = text.lower()
+        # Robust Heuristic Local Parser (DEVELOPMENT FALLBACK)
+        lower = (text or "").lower()
         cat = "Road Infrastructure"
         subcat = "Rural Road Connectivity"
-        if any(w in lower for w in ["water", "पानी", "प्राशन", "जल", "drinking"]):
+        if any(w in lower for w in ["water", "पानी", "प्राशन", "जल", "पाणी", "पाण्या", "पिण्या", "drinking", "well", "tap", "pipeline", "पाइप", "नळ"]):
             cat = "Water"
             subcat = "Drinking Water Supply"
-        elif any(w in lower for w in ["hospital", "doctor", "health", "आरोग्य", "अस्पताल", "bimar"]):
+        elif any(w in lower for w in ["hospital", "doctor", "health", "आरोग्य", "अस्पताल", "bimar", "medical", "clinic", "वैद्यकीय", "दवाखाना"]):
             cat = "Health"
             subcat = "Primary Health Center"
-        elif any(w in lower for w in ["school", "teacher", "education", "शाळा", "स्कूल"]):
+        elif any(w in lower for w in ["school", "teacher", "education", "शाळा", "स्कूल", "class", "student", "शिक्षक", "शिक्षण"]):
             cat = "Education"
             subcat = "School Infrastructure"
-        elif any(w in lower for w in ["power", "electricity", "light", "वीज", "बिजली"]):
+        elif any(w in lower for w in ["power", "electricity", "light", "वीज", "बिजली", "transformer", "outage", "विद्युत"]):
             cat = "Electricity"
             subcat = "Power Grid Reliability"
 
-        severity = "high" if any(w in lower for w in ["broken", "urgent", "danger", "खराब", "आणीबाणी", "grave"]) else "medium"
-        urgency = "high" if "three years" in lower or "urgent" in lower or "तुरंत" in lower else "medium"
+        severity = "high" if any(w in lower for w in ["broken", "urgent", "danger", "खराब", "आणीबाणी", "grave", "severe"]) else "medium"
+        urgency = "high" if any(w in lower for w in ["three years", "urgent", "तुरंत", "तात्काळ", "immediately"]) else "medium"
 
         return ExtractedCitizenRequest(
             category=cat,
@@ -90,15 +97,21 @@ class GeminiLLMProvider(BaseLLMProvider):
             severity=severity,
             urgency=urgency,
             affected_groups=["children", "elderly", "residents"],
-            issue_summary=text[:120],
+            issue_summary=text[:120] if text else "Public infrastructure request",
             potential_impact="Health, livelihood and public safety",
-            location_mentions=[]
+            location_mentions=[],
+            language_detected=language or "en",
+            translated_text=text or "",
+            model_confidence=None,
+            provider_status="DEVELOPMENT FALLBACK"
         )
 
 class GeminiEmbeddingProvider(BaseEmbeddingProvider):
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, expected_dim: int = 768):
         self.api_key = api_key
+        self.expected_dim = expected_dim
         self._genai = None
+        self.last_provider_status = "DEVELOPMENT FALLBACK"
         if api_key:
             try:
                 import google.generativeai as genai
@@ -107,26 +120,66 @@ class GeminiEmbeddingProvider(BaseEmbeddingProvider):
             except Exception:
                 pass
 
+    def validate_dimension(self, vector: List[float], expected_dim: Optional[int] = None) -> List[float]:
+        target = expected_dim or self.expected_dim
+        if len(vector) != target:
+            raise ValueError(f"Embedding dimension mismatch: expected {target}, got {len(vector)}")
+        return vector
+
     def generate_embedding(self, text: str) -> List[float]:
+        text_content = text or ""
         if self._genai:
             try:
                 res = self._genai.embed_content(
-                    model="models/embedding-001",
-                    content=text,
+                    model="models/text-embedding-004",
+                    content=text_content,
                     task_type="retrieval_document"
                 )
-                return res['embedding']
+                emb = res['embedding']
+                self.last_provider_status = "REAL"
+                self.expected_dim = len(emb)
+                return self.validate_dimension(emb)
             except Exception:
                 pass
 
-        # Deterministic 128-d pseudo-embedding generator based on semantic hashing
-        np.random.seed(abs(hash(text)) % (2**32))
-        vec = np.random.normal(0, 1, 128).tolist()
-        return vec
+        # Deterministic pseudo-embedding generator (DEVELOPMENT FALLBACK)
+        self.last_provider_status = "DEVELOPMENT FALLBACK"
+        np.random.seed(abs(hash(text_content)) % (2**32))
+        raw_vec = np.random.normal(0, 1, self.expected_dim)
+        norm = np.linalg.norm(raw_vec)
+        if norm > 0:
+            raw_vec = raw_vec / norm
+        return raw_vec.tolist()
 
-class MockGoogleSpeechProvider(BaseSpeechProvider):
+class GoogleSpeechProvider(BaseSpeechProvider):
+    def __init__(self, credentials_path: Optional[str] = None):
+        self.credentials_path = credentials_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        self.provider_status = "REAL" if self.credentials_path else "DEVELOPMENT FALLBACK"
+
     def transcribe(self, audio_data: str, language: Optional[str] = None) -> Dict[str, str]:
-        # Speech transcription simulator returning detected language and text
+        if self.credentials_path:
+            try:
+                from google.cloud import speech
+                client = speech.SpeechClient()
+                # Real speech recognition attempt
+                audio = speech.RecognitionAudio(content=audio_data.encode('utf-8') if isinstance(audio_data, str) else audio_data)
+                config = speech.RecognitionConfig(
+                    encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+                    sample_rate_hertz=16000,
+                    language_code=language or "hi-IN"
+                )
+                response = client.recognize(config=config, audio=audio)
+                if response.results:
+                    transcript = response.results[0].alternatives[0].transcript
+                    return {
+                        "language": language or "hi",
+                        "transcribed_text": transcript,
+                        "provider_status": "REAL"
+                    }
+            except Exception:
+                pass
+
+        # DEVELOPMENT FALLBACK Speech Provider
         lang = language or "hi"
         if lang == "hi":
             text = "हमारे गांव की सड़क पूरी तरह से खराब हो चुकी है, एम्बुलेंस भी नहीं आ सकती।"
@@ -139,8 +192,12 @@ class MockGoogleSpeechProvider(BaseSpeechProvider):
         
         return {
             "language": lang,
-            "transcribed_text": text
+            "transcribed_text": text,
+            "provider_status": "DEVELOPMENT FALLBACK"
         }
+
+class MockGoogleSpeechProvider(GoogleSpeechProvider):
+    pass
 
 # --- Service Container ---
 
@@ -149,6 +206,7 @@ class AIServiceContainer:
         key = settings.GEMINI_API_KEY
         self.llm = GeminiLLMProvider(key)
         self.embedding = GeminiEmbeddingProvider(key)
-        self.speech = MockGoogleSpeechProvider()
+        self.speech = GoogleSpeechProvider()
 
 ai_service = AIServiceContainer()
+
