@@ -6,18 +6,24 @@ import MapView from './MapView';
 import EvidencePanel from './EvidencePanel';
 import ImpactTracker from './ImpactTracker';
 import OpenDataPortal from './OpenDataPortal';
+import {
+  getAnalyticsOverview,
+  getHotspots,
+  recordRecommendationDecision,
+  AnalyticsOverview,
+  Hotspot
+} from '@/lib/api';
 
 export default function PolicymakerDashboard() {
-  const [overview, setOverview] = useState<any>(null);
-  const [hotspots, setHotspots] = useState<any[]>([]);
-  const [selectedHotspot, setSelectedHotspot] = useState<any>(null);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch Overview KPIs
-    fetch('http://localhost:8000/api/v1/analytics/overview')
-      .then(res => res.json())
+    getAnalyticsOverview()
       .then(data => setOverview(data))
       .catch(() => {
         setOverview({
@@ -33,14 +39,13 @@ export default function PolicymakerDashboard() {
       });
 
     // Fetch Hotspots
-    fetch('http://localhost:8000/api/v1/hotspots')
-      .then(res => res.json())
+    getHotspots()
       .then(data => {
         setHotspots(data);
         if (data.length > 0) setSelectedHotspot(data[0]);
       })
       .catch(() => {
-        const fallback = [
+        const fallback: Hotspot[] = [
           {
             id: 2,
             title: "Bhamragad Drinking Water Network & Filtration",
@@ -95,14 +100,10 @@ export default function PolicymakerDashboard() {
   const handleDecision = async (status: string) => {
     if (!selectedHotspot) return;
     try {
-      await fetch(`http://localhost:8000/api/v1/recommendations/1/decision`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          decision: status,
-          decision_reason: decisionReason || "Decision recorded by District Collector.",
-          reviewer: "District Collector / Magistrate"
-        })
+      await recordRecommendationDecision(1, {
+        decision: status,
+        decision_reason: decisionReason || "Decision recorded by District Collector.",
+        reviewer: "District Collector / Magistrate"
       });
       setDecisionStatus(status);
     } catch (e) {
