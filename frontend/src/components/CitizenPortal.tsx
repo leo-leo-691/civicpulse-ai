@@ -20,6 +20,7 @@ export default function CitizenPortal() {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [processingStep, setProcessingStep] = useState<number>(0);
   const [submitResult, setSubmitResult] = useState<CitizenRequestResponse | null>(null);
 
   // Status Lookup State
@@ -37,17 +38,35 @@ export default function CitizenPortal() {
     setLoading(true);
     setSubmitResult(null);
 
+    const stepDelay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+    // Sequence visual steps through 1 -> 2 -> 3 -> 4 over ~3.2s
+    const runVisualSteps = async () => {
+      setProcessingStep(1);
+      await stepDelay(800);
+      setProcessingStep(2);
+      await stepDelay(800);
+      setProcessingStep(3);
+      await stepDelay(800);
+      setProcessingStep(4);
+      await stepDelay(800);
+    };
+
     try {
-      const data = await submitCitizenRequest({
-        raw_text: inputText,
-        channel: channel,
-        language: language,
-        district: district,
-        locality: locality,
-        reporter_contact_hash: "web_user_hash"
-      });
+      const [data] = await Promise.all([
+        submitCitizenRequest({
+          raw_text: inputText,
+          channel: channel,
+          language: language,
+          district: district,
+          locality: locality,
+          reporter_contact_hash: "web_user_hash"
+        }),
+        runVisualSteps()
+      ]);
       setSubmitResult(data);
     } catch (err) {
+      await runVisualSteps().catch(() => {});
       // Mock fallback for UI demo if backend server offline
       setSubmitResult({
         status: "success",
@@ -60,6 +79,7 @@ export default function CitizenPortal() {
       });
     } finally {
       setLoading(false);
+      setProcessingStep(0);
     }
   };
 
@@ -268,22 +288,152 @@ export default function CitizenPortal() {
             {loading ? 'AI Processing & Deduplicating...' : 'Submit Infrastructure Request'}
           </button>
 
+          {/* AI Processing Step Visualization while loading */}
+          {loading && (
+            <div aria-live="polite" className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 animate-pulse" />
+                  AI processing request...
+                </span>
+                <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  Step {processingStep} of 4
+                </span>
+              </div>
+              <div className="space-y-2">
+                {/* Step 1 */}
+                <div className={`p-2.5 rounded-md border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 1
+                    ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs'
+                    : processingStep > 1
+                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                    : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                }`}>
+                  <div className="mt-0.5">
+                    {processingStep > 1 ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    ) : processingStep === 1 ? (
+                      <Mic className="w-4 h-4 text-blue-600 animate-bounce" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold">1</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">1. Multi-Language Ingestion & Audio Parsing</span>
+                      {processingStep === 1 && <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">Processing input...</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Normalizing citizen input and preparing the report</p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className={`p-2.5 rounded-md border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 2
+                    ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs'
+                    : processingStep > 2
+                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                    : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                }`}>
+                  <div className="mt-0.5">
+                    {processingStep > 2 ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    ) : processingStep === 2 ? (
+                      <Search className="w-4 h-4 text-blue-600 animate-bounce" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold">2</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">2. LLM Structured Categorization & Severity</span>
+                      {processingStep === 2 && <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">Analyzing request...</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Identifying infrastructure category, issue type and severity</p>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className={`p-2.5 rounded-md border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 3
+                    ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs'
+                    : processingStep > 3
+                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                    : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                }`}>
+                  <div className="mt-0.5">
+                    {processingStep > 3 ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    ) : processingStep === 3 ? (
+                      <AlertTriangle className="w-4 h-4 text-blue-600 animate-bounce" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold">3</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">3. Vector Embedding & Section 13 Deduplication</span>
+                      {processingStep === 3 && <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">Checking similar reports...</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Checking for similar citizen reports using semantic similarity</p>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className={`p-2.5 rounded-md border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 4
+                    ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                }`}>
+                  <div className="mt-0.5">
+                    {processingStep === 4 ? (
+                      <ShieldCheck className="w-4 h-4 text-blue-600 animate-bounce" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold">4</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">4. Reference ID & District Cluster Registration</span>
+                      {processingStep === 4 && <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">Preparing request registration...</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Registering the request and updating demand information</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Submission Result Feedback */}
           {submitResult && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-2">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                <CheckCircle className="w-5 h-5" /> Request Successfully Ingested!
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-3">
+              <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                  <CheckCircle className="w-5 h-5" /> AI processing complete — Request Ingested!
+                </div>
+                <span className="text-[10px] uppercase font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                  Verified
+                </span>
               </div>
-              <div className="text-xs text-slate-700 grid grid-cols-2 gap-2 pt-2 border-t border-emerald-200">
-                <div><span className="font-semibold">Reference Code:</span> <code className="bg-emerald-100 px-1 py-0.5 rounded text-emerald-900">{submitResult.reference_code}</code></div>
-                <div><span className="font-semibold">Extracted Category:</span> {submitResult.category}</div>
-                <div><span className="font-semibold">Extracted Subcategory:</span> {submitResult.subcategory}</div>
-                <div><span className="font-semibold">AI Severity Level:</span> <span className="uppercase text-amber-700 font-bold">{submitResult.severity}</span></div>
+              <div className="text-xs text-slate-700 grid grid-cols-2 gap-2 pt-1">
+                <div><span className="font-semibold text-slate-500">Reference:</span> <code className="bg-emerald-100 px-1 py-0.5 rounded text-emerald-900 font-bold">{submitResult.reference_code}</code></div>
+                <div><span className="font-semibold text-slate-500">Category:</span> <span className="font-medium text-slate-900">{submitResult.category}</span></div>
+                <div><span className="font-semibold text-slate-500">Subcategory:</span> <span className="font-medium text-slate-900">{submitResult.subcategory}</span></div>
+                <div><span className="font-semibold text-slate-500">Severity:</span> <span className="uppercase text-amber-700 font-bold">{submitResult.severity}</span></div>
               </div>
-              {submitResult.is_duplicate && (
-                <div className="p-2 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded mt-2 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <strong>Section 13 Duplicate Collapsed:</strong> Matches existing request ({submitResult.duplicate_of}). Count incremented, demand score updated.
+
+              {submitResult.is_duplicate ? (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-md flex items-start gap-2 mt-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Similar request detected</span>
+                    <span>Linked to: <strong>{submitResult.duplicate_of || 'Existing Village Report'}</strong> (Section 13 duplicate collapsed, demand score updated).</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2 bg-emerald-100/60 border border-emerald-200 text-emerald-900 text-xs rounded-md flex items-center gap-2 mt-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span><strong>No duplicate request detected:</strong> Logged as a new unique district report.</span>
                 </div>
               )}
             </div>

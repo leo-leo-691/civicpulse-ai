@@ -24,9 +24,12 @@ function MapBoundsUpdater({
   selectedHotspot: Hotspot | null;
 }) {
   const map = useMap();
+  const prevSelectedIdRef = React.useRef<number | null>(null);
 
   // Fit bounds to all hotspots when loaded
   useEffect(() => {
+    if (!map || !(map as any)._mapPane) return;
+
     if (hotspots && hotspots.length > 0) {
       const validPoints = hotspots
         .filter(
@@ -39,24 +42,27 @@ function MapBoundsUpdater({
         .map((h) => [h.latitude, h.longitude] as [number, number]);
 
       if (validPoints.length === 1) {
-        map.setView(validPoints[0], 9);
+        map.setView(validPoints[0], 9, { animate: false });
       } else if (validPoints.length > 1) {
         const bounds = L.latLngBounds(validPoints);
-        map.fitBounds(bounds, { padding: [45, 45], maxZoom: 10 });
+        map.fitBounds(bounds, { padding: [45, 45], maxZoom: 10, animate: false });
       }
     }
   }, [hotspots, map]);
 
   // Pan to selected hotspot when clicked
   useEffect(() => {
+    if (!map || !(map as any)._mapPane) return;
+
     if (
       selectedHotspot &&
       typeof selectedHotspot.latitude === 'number' &&
-      typeof selectedHotspot.longitude === 'number'
+      typeof selectedHotspot.longitude === 'number' &&
+      prevSelectedIdRef.current !== selectedHotspot.id
     ) {
-      map.panTo([selectedHotspot.latitude, selectedHotspot.longitude], {
-        animate: true,
-        duration: 0.8,
+      prevSelectedIdRef.current = selectedHotspot.id;
+      map.setView([selectedHotspot.latitude, selectedHotspot.longitude], map.getZoom(), {
+        animate: false,
       });
     }
   }, [selectedHotspot, map]);
@@ -107,6 +113,7 @@ export default function LeafletMapInner({
       <MapContainer
         center={defaultCenter}
         zoom={defaultZoom}
+        zoomAnimation={false}
         scrollWheelZoom={true}
         className="w-full h-full min-h-[360px]"
         style={{ width: '100%', height: '100%', minHeight: '360px' }}
