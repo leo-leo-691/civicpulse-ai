@@ -2,6 +2,14 @@
 
 import React, { useState } from 'react';
 import { Mic, Send, MessageSquare, Search, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
+import {
+  submitCitizenRequest,
+  getCitizenRequestStatus,
+  sendMessagingWebhook,
+  CitizenRequestResponse,
+  CitizenStatus,
+  MessagingWebhookResponse,
+} from '@/lib/api';
 
 export default function CitizenPortal() {
   const [activeTab, setActiveTab] = useState<'submit' | 'status' | 'messaging'>('submit');
@@ -12,17 +20,17 @@ export default function CitizenPortal() {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [submitResult, setSubmitResult] = useState<any>(null);
+  const [submitResult, setSubmitResult] = useState<CitizenRequestResponse | null>(null);
 
   // Status Lookup State
   const [searchRef, setSearchRef] = useState('');
-  const [statusResult, setStatusResult] = useState<any>(null);
+  const [statusResult, setStatusResult] = useState<CitizenStatus | null>(null);
   const [statusError, setStatusError] = useState('');
 
   // Messaging Webhook State
   const [webhookText, setWebhookText] = useState('हमारे गांव में पिछले तीन साल से पीने का पानी नहीं आ रहा है।');
   const [webhookPhone, setWebhookPhone] = useState('+919876543210');
-  const [webhookResponse, setWebhookResponse] = useState<any>(null);
+  const [webhookResponse, setWebhookResponse] = useState<MessagingWebhookResponse | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,19 +38,14 @@ export default function CitizenPortal() {
     setSubmitResult(null);
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          raw_text: inputText,
-          channel: channel,
-          language: language,
-          district: district,
-          locality: locality,
-          reporter_contact_hash: "web_user_hash"
-        })
+      const data = await submitCitizenRequest({
+        raw_text: inputText,
+        channel: channel,
+        language: language,
+        district: district,
+        locality: locality,
+        reporter_contact_hash: "web_user_hash"
       });
-      const data = await res.json();
       setSubmitResult(data);
     } catch (err) {
       // Mock fallback for UI demo if backend server offline
@@ -67,9 +70,7 @@ export default function CitizenPortal() {
     setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/requests/${searchRef}/status`);
-      if (!res.ok) throw new Error("Reference code not found");
-      const data = await res.json();
+      const data = await getCitizenRequestStatus(searchRef);
       setStatusResult(data);
     } catch (err: any) {
       // Demo mock match for #REQ-48213 or #REQ-48214
@@ -98,15 +99,10 @@ export default function CitizenPortal() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/channels/messaging/webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          Body: webhookText,
-          From: `whatsapp:${webhookPhone}`
-        })
+      const data = await sendMessagingWebhook({
+        Body: webhookText,
+        From: `whatsapp:${webhookPhone}`
       });
-      const data = await res.json();
       setWebhookResponse(data);
     } catch (err) {
       setWebhookResponse({
