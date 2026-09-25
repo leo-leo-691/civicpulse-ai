@@ -288,8 +288,10 @@ export default function CitizenPortal() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Language</label>
+              <label htmlFor="citizen-language-select" className="block text-xs font-semibold text-slate-700 mb-1">Language</label>
               <select
+                id="citizen-language-select"
+                aria-label="Select Preferred Language"
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white"
@@ -301,8 +303,10 @@ export default function CitizenPortal() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">District</label>
+              <label htmlFor="citizen-district-select" className="block text-xs font-semibold text-slate-700 mb-1">District</label>
               <select
+                id="citizen-district-select"
+                aria-label="Select District"
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
                 className="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white"
@@ -312,8 +316,10 @@ export default function CitizenPortal() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Locality / Village</label>
+              <label htmlFor="citizen-locality-input" className="block text-xs font-semibold text-slate-700 mb-1">Locality / Village</label>
               <input
+                id="citizen-locality-input"
+                aria-label="Enter Locality or Village Name"
                 type="text"
                 value={locality}
                 onChange={(e) => setLocality(e.target.value)}
@@ -326,10 +332,11 @@ export default function CitizenPortal() {
           {/* Voice vs Text toggle */}
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-semibold text-slate-700">Citizen Description (Voice or Text)</label>
+              <label htmlFor="citizen-description-textarea" className="text-xs font-semibold text-slate-700">Citizen Description (Voice or Text)</label>
               <button
                 type="button"
                 onClick={toggleRecording}
+                aria-label={isRecording ? 'Stop Recording' : 'Record Audio'}
                 className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded transition ${
                   isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                 }`}
@@ -346,6 +353,7 @@ export default function CitizenPortal() {
                 <button
                   type="button"
                   onClick={clearAudio}
+                  aria-label="Clear recorded audio"
                   className="text-slate-500 hover:text-slate-700 font-bold ml-2"
                 >
                   ✕ Clear
@@ -358,6 +366,8 @@ export default function CitizenPortal() {
               </div>
             )}
             <textarea
+              id="citizen-description-textarea"
+              aria-label="Citizen Issue Description"
               rows={4}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}

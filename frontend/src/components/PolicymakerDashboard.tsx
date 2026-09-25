@@ -9,14 +9,17 @@ import OpenDataPortal from './OpenDataPortal';
 import {
   getAnalyticsOverview,
   getHotspots,
+  getRecommendations,
   recordRecommendationDecision,
   AnalyticsOverview,
-  Hotspot
+  Hotspot,
+  Recommendation
 } from '@/lib/api';
 
 export default function PolicymakerDashboard() {
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
@@ -95,12 +98,22 @@ export default function PolicymakerDashboard() {
         setHotspots(fallback);
         setSelectedHotspot(fallback[0]);
       });
+
+    // Fetch Recommendations
+    getRecommendations()
+      .then(data => setRecommendations(data))
+      .catch(() => setRecommendations([]));
   }, []);
+
+  const selectedRecommendation = recommendations.find(
+    rec => rec.cluster_id === selectedHotspot?.id || rec.id === selectedHotspot?.id
+  );
 
   const handleDecision = async (status: string) => {
     if (!selectedHotspot) return;
+    const targetRecId = selectedRecommendation?.id || selectedHotspot.id || 1;
     try {
-      await recordRecommendationDecision(1, {
+      await recordRecommendationDecision(targetRecId, {
         decision: status,
         decision_reason: decisionReason || "Decision recorded by District Collector.",
         reviewer: "District Collector / Magistrate"
@@ -195,7 +208,7 @@ export default function PolicymakerDashboard() {
 
           <div className="text-xs text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1">
             <p className="font-semibold text-slate-900">Recommended Intervention:</p>
-            <p>"{selectedHotspot.title} in {selectedHotspot.district} District ({selectedHotspot.affected_villages} Villages)"</p>
+            <p>"{selectedRecommendation?.proposed_intervention || `${selectedHotspot.title} in ${selectedHotspot.district} District (${selectedHotspot.affected_villages} Villages)`}"</p>
           </div>
 
           <div>

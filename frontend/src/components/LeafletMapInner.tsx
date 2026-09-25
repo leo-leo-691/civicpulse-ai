@@ -141,6 +141,11 @@ export default function LeafletMapInner({
               pathOptions={pathOptions}
               eventHandlers={{
                 click: () => onSelectHotspot(spot),
+                keypress: (e: any) => {
+                  if (e.originalEvent?.key === 'Enter' || e.originalEvent?.key === ' ') {
+                    onSelectHotspot(spot);
+                  }
+                },
               }}
             >
               <Popup className="civicpulse-popup">
