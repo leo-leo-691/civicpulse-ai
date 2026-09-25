@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Mic, Send, MessageSquare, Search, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import {
   submitCitizenRequest,
@@ -19,9 +19,77 @@ export default function CitizenPortal() {
   const [locality, setLocality] = useState('Shirur Village');
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [micError, setMicError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [processingStep, setProcessingStep] = useState<number>(0);
   const [submitResult, setSubmitResult] = useState<CitizenRequestResponse | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const startRecording = async () => {
+    setMicError('');
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setMicError('Microphone recording is not supported in this browser.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64Result = reader.result as string;
+          setAudioBase64(base64Result);
+        };
+      };
+
+      recorder.start();
+      setIsRecording(true);
+    } catch (err: any) {
+      console.error('Microphone access error:', err);
+      setMicError('Microphone access denied or unavailable. Please check browser permissions.');
+      setIsRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsRecording(false);
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const clearAudio = () => {
+    setAudioBase64(null);
+  };
 
   // Status Lookup State
   const [searchRef, setSearchRef] = useState('');
@@ -56,7 +124,7 @@ export default function CitizenPortal() {
       const [data] = await Promise.all([
         submitCitizenRequest({
           raw_text: inputText,
-          channel: channel,
+          ...(audioBase64 ? { audio_base64: audioBase64, channel: 'voice' } : { channel: channel }),
           language: language,
           district: district,
           locality: locality,
@@ -261,7 +329,7 @@ export default function CitizenPortal() {
               <label className="text-xs font-semibold text-slate-700">Citizen Description (Voice or Text)</label>
               <button
                 type="button"
-                onClick={() => setIsRecording(!isRecording)}
+                onClick={toggleRecording}
                 className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded transition ${
                   isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                 }`}
@@ -270,6 +338,25 @@ export default function CitizenPortal() {
                 {isRecording ? 'Stop Recording (Listening...)' : 'Record Audio'}
               </button>
             </div>
+            {audioBase64 && !isRecording && (
+              <div className="mb-2 p-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-md flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Audio recorded and ready for submission
+                </span>
+                <button
+                  type="button"
+                  onClick={clearAudio}
+                  className="text-slate-500 hover:text-slate-700 font-bold ml-2"
+                >
+                  ✕ Clear
+                </button>
+              </div>
+            )}
+            {micError && (
+              <div className="mb-2 p-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
+                {micError}
+              </div>
+            )}
             <textarea
               rows={4}
               value={inputText}
