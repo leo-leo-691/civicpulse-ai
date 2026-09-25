@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowDownRight, ArrowUpRight, TrendingDown, CheckCircle2, History } from 'lucide-react';
+import { getInvestmentImpactHistory } from '@/lib/api';
 
 export default function ImpactTracker() {
   const [impactData, setImpactData] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/v1/investments/1/impact-history')
-      .then(res => res.json())
+    getInvestmentImpactHistory(1)
       .then(data => setImpactData(data))
       .catch(() => {
         // Fallback for UI demo
