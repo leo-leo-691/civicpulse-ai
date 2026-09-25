@@ -1,14 +1,14 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime
 
 # --- Pydantic Schema for AI Structured Extraction (§5 & §32 Prompt Injection Defense) ---
 
 class ExtractedCitizenRequest(BaseModel):
-    category: str = Field(..., description="Primary category: Road Infrastructure, Water, Health, Education, Electricity, Public Transport")
+    category: Literal["Road Infrastructure", "Water", "Health", "Education", "Electricity", "Public Transport"] = Field(..., description="Primary category: Road Infrastructure, Water, Health, Education, Electricity, Public Transport")
     subcategory: str = Field(..., description="Subcategory: e.g. Drinking Water, Rural Road Connectivity, School Infrastructure")
-    severity: str = Field(default="medium", description="Severity level: low, medium, high, critical")
-    urgency: str = Field(default="medium", description="Urgency level: low, medium, high, critical")
+    severity: Literal["low", "medium", "high", "critical"] = Field(default="medium", description="Severity level: low, medium, high, critical")
+    urgency: Literal["low", "medium", "high", "critical"] = Field(default="medium", description="Urgency level: low, medium, high, critical")
     affected_groups: List[str] = Field(default_factory=list, description="Groups affected, e.g. children, elderly, farmers")
     issue_summary: str = Field(..., description="Clean concise summary of the issue")
     potential_impact: str = Field(default="", description="Impact on community")
@@ -35,8 +35,8 @@ class GroundedRecommendation(BaseModel):
 class RequestCreate(BaseModel):
     raw_text: Optional[str] = None
     audio_base64: Optional[str] = None
-    channel: str = Field(default="text", description="text, voice, whatsapp, sms, telegram")
-    language: Optional[str] = Field(default="en", description="ISO code: en, hi, mr, pt")
+    channel: Literal["text", "voice", "whatsapp", "sms", "telegram"] = Field(default="text", description="text, voice, whatsapp, sms, telegram")
+    language: Optional[Literal["en", "hi", "mr", "pt"]] = Field(default="en", description="ISO code: en, hi, mr, pt")
     district: Optional[str] = "Pune"
     locality: Optional[str] = "Shirur Village"
     latitude: Optional[float] = 18.8260
@@ -56,7 +56,7 @@ class CitizenStatusResponse(BaseModel):
     created_at: datetime
 
 class DecisionCreate(BaseModel):
-    decision: str = Field(..., description="Approved, Rejected, Flagged, Needs Analysis")
+    decision: Literal["Approved", "Rejected", "Flagged", "Needs Analysis"] = Field(..., description="Approved, Rejected, Flagged, Needs Analysis")
     decision_reason: str
     reviewer: str = "District Officer"
 

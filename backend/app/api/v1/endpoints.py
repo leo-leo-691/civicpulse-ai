@@ -1,7 +1,10 @@
 import datetime
+import hashlib
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.domain import (
     CitizenRequest, RequestCluster, Location, Demographic, Infrastructure,
@@ -13,8 +16,19 @@ from app.schemas.requests import (
 )
 from app.ai.pipeline import process_incoming_request
 from app.services.priority import calculate_priority_score
+from app.ai.clustering import SemanticClusterEngine
 
 router = APIRouter()
+
+@router.post("/admin/reprocess-clusters")
+def admin_reprocess_clusters(db: Session = Depends(get_db)):
+    """
+    On-demand DBSCAN execution to recluster existing requests (Admin / Ops).
+    """
+    engine = SemanticClusterEngine()
+    result = engine.execute_batch_clustering(db)
+    db.commit()
+    return {"status": "success", "result": result}
 
 @router.post("/requests")
 def submit_citizen_request(payload: RequestCreate, db: Session = Depends(get_db)):
@@ -73,7 +87,7 @@ def messaging_webhook(payload: dict, db: Session = Depends(get_db)):
         language="hi",
         district="Pune",
         locality="Shirur Village",
-        reporter_contact_hash=str(hash(sender))
+        reporter_contact_hash=hashlib.sha256((sender + settings.SECRET_KEY).encode()).hexdigest()
     )
     req, is_dup, orig_req = process_incoming_request(db, req_payload)
     
@@ -90,17 +104,28 @@ def get_hotspot_clusters(db: Session = Depends(get_db)):
     clusters = db.query(RequestCluster).all()
     results = []
     for c in clusters:
+        location = c.requests[0].location if c.requests else None
+        infra_coverage = location.infrastructure.overall_index if location and location.infrastructure else 35.0
+        vuln_index = location.demographics.vulnerability_index if location and location.demographics else 75.0
+        mob_pen = location.demographics.mobile_penetration_rate if location and location.demographics else (48.0 if c.district == "Pune" else 75.0)
+        
         # Fetch associated metrics or calculate dynamically
         p_breakdown = calculate_priority_score(
             unique_request_count=c.unique_request_count,
             total_request_count=c.total_request_count,
-            infra_coverage_pct=35.0,
+            infra_coverage_pct=infra_coverage,
             affected_population=c.estimated_population,
-            vulnerability_index=75.0,
+            vulnerability_index=vuln_index,
             existing_investment_pct=30.0,
             urgency_score=85.0,
-            mobile_penetration_pct=48.0 if c.district == "Pune" else 75.0
+            mobile_penetration_pct=mob_pen
         )
+        
+        # Persist the computed score to DB
+        c.priority_score = p_breakdown.overall_score
+        c.digital_access_correction = p_breakdown.digital_access_correction
+        c.is_under_reported_flag = p_breakdown.under_reported_flag
+        db.add(c)
         
         results.append({
             "id": c.id,
@@ -115,9 +140,11 @@ def get_hotspot_clusters(db: Session = Depends(get_db)):
             "digital_access_correction": p_breakdown.digital_access_correction,
             "is_under_reported": p_breakdown.under_reported_flag,
             "evidence": p_breakdown.evidence_bullet_points,
-            "latitude": 18.8260 if c.district == "Pune" else 19.8762,
-            "longitude": 74.3790 if c.district == "Pune" else 75.3433
+            "latitude": location.latitude if location else (18.8260 if c.district == "Pune" else 19.8762),
+            "longitude": location.longitude if location else (74.3790 if c.district == "Pune" else 75.3433)
         })
+        
+    db.commit()
     return results
 
 @router.get("/recommendations")
@@ -196,15 +223,28 @@ def get_analytics_overview(db: Session = Depends(get_db)):
     unique_reqs = total_reqs - dup_reqs if total_reqs > 0 else 0
     active_clusters = db.query(RequestCluster).count()
     
+    critical_projects = db.query(RequestCluster).filter(RequestCluster.priority_score >= 85).count()
+    
+    total_population = db.query(func.sum(RequestCluster.estimated_population)).scalar() or 0
+    
+    # avg_infra_gap_pct: AVERAGE of (100 - Infrastructure.overall_index) across locations that have at least one linked citizen request
+    locations_with_requests = db.query(Location.id).join(CitizenRequest).distinct()
+    avg_infra_index = db.query(func.avg(Infrastructure.overall_index)).filter(
+        Infrastructure.location_id.in_(locations_with_requests)
+    ).scalar()
+    avg_infra_gap_pct = 100.0 - avg_infra_index if avg_infra_index is not None else 0.0
+
+    digital_access_corrections = db.query(RequestCluster).filter(RequestCluster.is_under_reported_flag == True).count()
+
     return {
-        "total_requests": max(total_reqs, 4821),
-        "unique_requests": max(unique_reqs, 1204),
-        "duplicate_count": max(dup_reqs, 3617),
-        "active_hotspots": max(active_clusters, 14),
-        "critical_priority_projects": 3,
-        "total_population_impacted": 428000,
-        "avg_infra_gap_pct": 58.4,
-        "digital_access_corrections_applied": 4
+        "total_requests": total_reqs,
+        "unique_requests": unique_reqs,
+        "duplicate_count": dup_reqs,
+        "active_hotspots": active_clusters,
+        "critical_priority_projects": critical_projects,
+        "total_population_impacted": total_population,
+        "avg_infra_gap_pct": round(avg_infra_gap_pct, 1),
+        "digital_access_corrections_applied": digital_access_corrections
     }
 
 @router.get("/open-data/export", response_model=List[OpenDataExportItem])
@@ -215,18 +255,19 @@ def open_data_export(db: Session = Depends(get_db)):
     clusters = db.query(RequestCluster).all()
     export = []
     for c in clusters:
+        location = c.requests[0].location if c.requests else None
         export.append(OpenDataExportItem(
             cluster_id=c.id,
             title=c.title,
             category=c.category,
             district=c.district,
-            locality="Anonymized Cluster Locality",
+            locality=location.locality if location else "Anonymized Cluster Locality",
             unique_request_count=c.unique_request_count,
             total_request_count=c.total_request_count,
             priority_score=c.priority_score,
             digital_access_correction=c.digital_access_correction,
             is_under_reported=c.is_under_reported_flag,
-            latitude=18.8260 if c.district == "Pune" else 19.8762,
-            longitude=74.3790 if c.district == "Pune" else 75.3433
+            latitude=location.latitude if location else (18.8260 if c.district == "Pune" else 19.8762),
+            longitude=location.longitude if location else (74.3790 if c.district == "Pune" else 75.3433)
         ))
     return export

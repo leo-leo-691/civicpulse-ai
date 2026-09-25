@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 import numpy as np
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
@@ -144,7 +145,7 @@ class GeminiEmbeddingProvider(BaseEmbeddingProvider):
 
         # Deterministic pseudo-embedding generator (DEVELOPMENT FALLBACK)
         self.last_provider_status = "DEVELOPMENT FALLBACK"
-        np.random.seed(abs(hash(text_content)) % (2**32))
+        np.random.seed(int(hashlib.sha256(text_content.encode()).hexdigest(), 16) % (2**32))
         raw_vec = np.random.normal(0, 1, self.expected_dim)
         norm = np.linalg.norm(raw_vec)
         if norm > 0:

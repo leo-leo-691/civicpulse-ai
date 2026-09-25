@@ -1,7 +1,6 @@
 import re
 from typing import Dict, Any, Tuple, List, Optional
 from app.schemas.requests import GroundedRecommendation
-from app.ai.providers import ai_service
 
 def validate_recommendation_evidence(
     rec: GroundedRecommendation,
@@ -59,20 +58,7 @@ def generate_grounded_recommendation(
     priority = evidence_json.get("priority_score", 50.0)
     digital_corr = evidence_json.get("digital_access_correction", 0.0)
 
-    prompt = f"""
-    You are a public infrastructure policy advisor.
-    Synthesize a clear, actionable 1-2 sentence recommendation for District Magistrates.
-    Use ONLY the verified evidence provided below. Do NOT invent budget, population, or village counts.
-
-    Evidence Package:
-    - Sector: {cat}
-    - District: {district}
-    - Affected Villages: {villages}
-    - Population of Affected Locations: {pop}
-    - Priority Score: {priority}
-    - Digital Access Correction: +{digital_corr} pts
-    """
-
+    # Recommendation text is template-based by design, not LLM-generated, to guarantee grounding.
     intervention_text = (
         f"Prioritize {cat} intervention in {district} covering {villages} affected village(s) "
         f"with a locality population proxy of {pop:,} inhabitants (Priority Score: {priority:.1f})."

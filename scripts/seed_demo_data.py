@@ -11,6 +11,9 @@ from app.models.domain import (
     RequestCluster, InvestmentProject, InvestmentImpactHistory,
     Recommendation, RecommendationDecision
 )
+from app.ai.clustering import SemanticClusterEngine
+import numpy as np
+import random
 
 def seed_database():
     print("Seeding CivicPulse AI Demo Data...")
@@ -64,60 +67,51 @@ def seed_database():
         db.add_all([infra1, infra2])
         db.flush()
 
-        # 4. Request Clusters
-        cluster1 = RequestCluster(
-            title="Rural Road Connectivity & Asphalt Paving",
-            category="Road Infrastructure", subcategory="Rural Road Connectivity",
-            district="Pune", unique_request_count=837, total_request_count=2480,
-            affected_villages_count=12, estimated_population=35000,
-            priority_score=78.5, digital_access_correction=0.0, is_under_reported_flag=False, status="Active"
-        )
-        cluster2 = RequestCluster(
-            title="Bhamragad Drinking Water Network & Filtration",
-            category="Water", subcategory="Drinking Water Supply",
-            district="Gadchiroli", unique_request_count=1204, total_request_count=4821,
-            affected_villages_count=14, estimated_population=42800,
-            priority_score=91.3, digital_access_correction=6.0, is_under_reported_flag=True, status="Active"
-        )
-        db.add_all([cluster1, cluster2])
+        # 4 & 5. Generate high volume of requests for Clustering
+        requests = []
+        # Pune Road Requests
+        base_emb_road = np.random.normal(0, 1, 768)
+        base_emb_road = base_emb_road / np.linalg.norm(base_emb_road)
+        for i in range(1500):
+            req = CitizenRequest(
+                reference_code=f"#REQ-PUNE-{i}", channel=random.choice(["text", "voice", "whatsapp"]), language="en",
+                raw_text=f"Road repair needed at location {i}",
+                translated_text="Unusable village road blocking medical access",
+                category="Road Infrastructure", subcategory="Rural Road Connectivity",
+                severity=random.choice(["high", "medium", "critical"]), urgency="high", location_id=loc1.id,
+                status="Pending Cluster", duplicate_count=random.randint(0, 5),
+                embedding_json=base_emb_road.tolist()
+            )
+            requests.append(req)
+
+        # Gadchiroli Water Requests
+        base_emb_water = np.random.normal(0, 1, 768)
+        base_emb_water = base_emb_water / np.linalg.norm(base_emb_water)
+        for i in range(2500):
+            req = CitizenRequest(
+                reference_code=f"#REQ-GAD-{i}", channel=random.choice(["text", "voice", "whatsapp"]), language="hi",
+                raw_text=f"Water supply broken at house {i}",
+                translated_text="No drinking water supply for three years affecting elderly and children",
+                category="Water", subcategory="Drinking Water Supply",
+                severity=random.choice(["high", "medium", "critical"]), urgency="high", location_id=loc2.id,
+                status="Pending Cluster", duplicate_count=random.randint(0, 3),
+                embedding_json=base_emb_water.tolist()
+            )
+            requests.append(req)
+
+        db.add_all(requests)
         db.flush()
 
-        # 5. Citizen Requests (Multilingual + Duplicate Slice)
-        req1 = CitizenRequest(
-            reference_code="#REQ-48213", channel="text", language="en",
-            raw_text="Our village road is broken and ambulances cannot reach in emergencies.",
-            translated_text="Unusable village road blocking medical access",
-            category="Road Infrastructure", subcategory="Rural Road Connectivity",
-            severity="high", urgency="critical", location_id=loc1.id,
-            status="Under Review", cluster_id=cluster1.id, duplicate_count=4
-        )
-        req2 = CitizenRequest(
-            reference_code="#REQ-48214", channel="voice", language="hi",
-            raw_text="हमारे गांव में पिछले तीन साल से पीने का पानी नहीं आ रहा है। बच्चे और बुजुर्ग बीमार हैं।",
-            transcribed_text="हमारे गांव में पिछले तीन साल से पीने का पानी नहीं आ रहा है।",
-            translated_text="No drinking water supply for three years affecting elderly and children",
-            category="Water", subcategory="Drinking Water Supply",
-            severity="critical", urgency="critical", location_id=loc2.id,
-            status="Under Review", cluster_id=cluster2.id, duplicate_count=12
-        )
-        req3 = CitizenRequest(
-            reference_code="#REQ-48215", channel="whatsapp", language="mr",
-            raw_text="आमच्या गावातील पिण्याच्या पाण्याची समस्या अत्यंत गंभीर आहे.",
-            translated_text="Severe drinking water scarcity in village locality",
-            category="Water", subcategory="Drinking Water Supply",
-            severity="high", urgency="high", location_id=loc2.id,
-            status="Merged into Cluster", cluster_id=cluster2.id, duplicate_count=0
-        )
-        req4 = CitizenRequest(
-            reference_code="#REQ-48216", channel="whatsapp", language="pt",
-            raw_text="Nossa vila não tem água potável há três anos. As crianças estão sofrendo.",
-            translated_text="BRICS Language Demo: Portuguese water access report",
-            category="Water", subcategory="Drinking Water Supply",
-            severity="high", urgency="high", location_id=loc2.id,
-            status="Merged into Cluster", cluster_id=cluster2.id, duplicate_count=0
-        )
-        db.add_all([req1, req2, req3, req4])
-        db.flush()
+        # Run DBSCAN Clustering to automatically create RequestCluster records
+        cluster_engine = SemanticClusterEngine()
+        cluster_engine.execute_batch_clustering(db)
+        db.commit()
+
+        # Fetch the newly created clusters to link recommendations
+        cluster_water = db.query(RequestCluster).filter(RequestCluster.district == "Gadchiroli").first()
+        if not cluster_water:
+            # Fallback if clustering failed for some reason
+            cluster_water = RequestCluster(id=2)
 
         # 6. Investment Project & Retrospective Impact (Section 31)
         proj1 = InvestmentProject(
@@ -140,7 +134,7 @@ def seed_database():
 
         # 7. Recommendations & Decisions (Section 28 & 29)
         rec1 = Recommendation(
-            cluster_id=cluster2.id,
+            cluster_id=cluster_water.id,
             proposed_intervention="Upgrade Rural Drinking Water Network & Install Solar Filtration Units in 14 Villages",
             priority_score=91.3,
             digital_access_correction=6.0,

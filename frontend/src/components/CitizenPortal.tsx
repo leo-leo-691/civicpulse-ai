@@ -24,6 +24,8 @@ export default function CitizenPortal() {
   const [loading, setLoading] = useState(false);
   const [processingStep, setProcessingStep] = useState<number>(0);
   const [submitResult, setSubmitResult] = useState<CitizenRequestResponse | null>(null);
+  const [submitError, setSubmitError] = useState<string>('');
+  const [webhookError, setWebhookError] = useState<string>('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -105,6 +107,7 @@ export default function CitizenPortal() {
     e.preventDefault();
     setLoading(true);
     setSubmitResult(null);
+    setSubmitError('');
 
     const stepDelay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -133,18 +136,8 @@ export default function CitizenPortal() {
         runVisualSteps()
       ]);
       setSubmitResult(data);
-    } catch (err) {
-      await runVisualSteps().catch(() => {});
-      // Mock fallback for UI demo if backend server offline
-      setSubmitResult({
-        status: "success",
-        reference_code: `#REQ-${Math.floor(10000 + Math.random() * 90000)}`,
-        is_duplicate: false,
-        category: "Road Infrastructure",
-        subcategory: "Rural Road Connectivity",
-        severity: "high",
-        message: "Your request has been received and processed."
-      });
+    } catch (err: any) {
+      setSubmitError(`Failed to submit request: ${err.message || 'Server unreachable'}`);
     } finally {
       setLoading(false);
       setProcessingStep(0);
@@ -161,23 +154,7 @@ export default function CitizenPortal() {
       const data = await getCitizenRequestStatus(searchRef);
       setStatusResult(data);
     } catch (err: any) {
-      // Demo mock match for #REQ-48213 or #REQ-48214
-      if (searchRef.toUpperCase() === '#REQ-48213' || searchRef.toUpperCase() === '#REQ-48214') {
-        setStatusResult({
-          reference_code: searchRef.toUpperCase(),
-          status: "Under Review by District Officer",
-          category: searchRef.toUpperCase() === '#REQ-48213' ? "Road Infrastructure" : "Water",
-          subcategory: searchRef.toUpperCase() === '#REQ-48213' ? "Rural Road Connectivity" : "Drinking Water Supply",
-          district: searchRef.toUpperCase() === '#REQ-48213' ? "Pune" : "Gadchiroli",
-          locality: "Bhamragad / Shirur Block",
-          cluster_title: "District Infrastructure Priority Initiative",
-          cluster_unique_requests: 1204,
-          cluster_priority_score: 91.3,
-          created_at: new Date().toISOString()
-        });
-      } else {
-        setStatusError("Request reference code not found. Please check #REQ-XXXXX format.");
-      }
+      setStatusError("Request reference code not found. Please check #REQ-XXXXX format or server connection.");
     } finally {
       setLoading(false);
     }
@@ -192,11 +169,8 @@ export default function CitizenPortal() {
         From: `whatsapp:${webhookPhone}`
       });
       setWebhookResponse(data);
-    } catch (err) {
-      setWebhookResponse({
-        status: "received",
-        reply: "Thank you. Your WhatsApp report has been logged under #REQ-89210 and merged into district priority cluster."
-      });
+    } catch (err: any) {
+      setWebhookError("Failed to trigger webhook: Server unreachable.");
     } finally {
       setLoading(false);
     }
@@ -501,6 +475,17 @@ export default function CitizenPortal() {
             </div>
           )}
 
+          {/* Error Feedback */}
+          {submitError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-900 text-xs rounded-lg flex items-start gap-2 mt-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Submission Failed</span>
+                <span>{submitError}</span>
+              </div>
+            </div>
+          )}
+
           {/* Submission Result Feedback */}
           {submitResult && (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-3">
@@ -634,6 +619,12 @@ export default function CitizenPortal() {
           >
             <MessageSquare className="w-4 h-4" /> Trigger Inbound Webhook Payload
           </button>
+
+          {webhookError && (
+            <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200">
+              {webhookError}
+            </div>
+          )}
 
           {webhookResponse && (
             <div className="p-4 bg-slate-900 text-emerald-400 font-mono text-xs rounded-lg space-y-1">

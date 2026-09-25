@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import CitizenPortal from '@/components/CitizenPortal';
 import PolicymakerDashboard from '@/components/PolicymakerDashboard';
-import { Shield, Users, LayoutDashboard, Globe2 } from 'lucide-react';
+import { Shield, Users, LayoutDashboard, Globe2, AlertTriangle, Database } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const [view, setView] = useState<'citizen' | 'policymaker'>('policymaker');
@@ -48,9 +49,33 @@ export default function Home() {
               <Users className="w-4 h-4" />
               Citizen Voice Portal
             </button>
+            <button
+              onClick={async () => {
+                if(confirm('Trigger DBSCAN Re-Clustering? This may take a few seconds.')) {
+                  try {
+                    const res = await fetch('http://localhost:8000/api/v1/admin/reprocess-clusters', { method: 'POST' });
+                    const data = await res.json();
+                    alert(`Clustering complete! Result: ${JSON.stringify(data.result)}`);
+                    window.location.reload();
+                  } catch (e) {
+                    alert('Error triggering clustering');
+                  }
+                }
+              }}
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-md transition text-rose-400 hover:text-rose-300"
+            >
+              <Database className="w-4 h-4" />
+              Re-Cluster Data
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Synthetic Data Banner */}
+      <div className="bg-amber-100 border-b border-amber-200 text-amber-800 px-6 py-2 text-xs font-medium flex items-center justify-center gap-2">
+        <AlertTriangle className="w-4 h-4" />
+        <span><strong>Demo Notice:</strong> Data presented in this dashboard (including locations, reports, and indices) is synthesized for demonstration purposes and does not represent live or real government statistics.</span>
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">

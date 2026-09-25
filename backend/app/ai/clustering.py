@@ -6,6 +6,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import silhouette_score
 from scipy.spatial.distance import pdist, squareform
 from app.models.domain import CitizenRequest, RequestCluster, Location, Demographic, Recommendation
+from app.services.priority import calculate_priority_score
 from app.ai.pipeline import calculate_cluster_centroid, cosine_similarity
 
 class SemanticClusterEngine:
@@ -201,6 +202,23 @@ class SemanticClusterEngine:
                     RequestCluster.status == "Active"
                 ).first()
 
+                # Calculate the priority score with real data
+                location = req_group[0].location
+                infra_coverage = location.infrastructure.overall_index if location and location.infrastructure else 35.0
+                vuln_index = location.demographics.vulnerability_index if location and location.demographics else 75.0
+                mob_pen = location.demographics.mobile_penetration_rate if location and location.demographics else (48.0 if district == "Pune" else 75.0)
+
+                p_breakdown = calculate_priority_score(
+                    unique_request_count=unique_count,
+                    total_request_count=total_count,
+                    infra_coverage_pct=infra_coverage,
+                    affected_population=pop_proxy or 1000,
+                    vulnerability_index=vuln_index,
+                    existing_investment_pct=30.0,
+                    urgency_score=85.0,
+                    mobile_penetration_pct=mob_pen
+                )
+
                 if not existing_cluster:
                     cluster = RequestCluster(
                         title=f"{cat} - {district} Cluster",
@@ -211,7 +229,9 @@ class SemanticClusterEngine:
                         total_request_count=total_count,
                         affected_villages_count=affected_villages,
                         estimated_population=pop_proxy,
-                        priority_score=75.0,
+                        priority_score=p_breakdown.overall_score,
+                        digital_access_correction=p_breakdown.digital_access_correction,
+                        is_under_reported_flag=p_breakdown.under_reported_flag,
                         status="Active"
                     )
                     db.add(cluster)
@@ -222,6 +242,9 @@ class SemanticClusterEngine:
                     existing_cluster.total_request_count = total_count
                     existing_cluster.affected_villages_count = affected_villages
                     existing_cluster.estimated_population = pop_proxy
+                    existing_cluster.priority_score = p_breakdown.overall_score
+                    existing_cluster.digital_access_correction = p_breakdown.digital_access_correction
+                    existing_cluster.is_under_reported_flag = p_breakdown.under_reported_flag
                     db.add(existing_cluster)
                     cluster_id = existing_cluster.id
 

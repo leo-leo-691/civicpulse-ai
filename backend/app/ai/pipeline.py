@@ -7,7 +7,8 @@ import numpy as np
 from typing import Tuple, Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import update
-from app.models.domain import CitizenRequest, RequestCluster, Location
+from fastapi import HTTPException
+from app.models.domain import CitizenRequest, RequestCluster, Location, AbuseFlag
 from app.schemas.requests import RequestCreate, ExtractedCitizenRequest
 from app.ai.providers import ai_service
 from app.core.config import settings
@@ -69,6 +70,23 @@ def process_incoming_request(
     raw_text = payload.raw_text or ""
     transcribed_text = None
     lang = payload.language or "en"
+    
+    # 0. Rate limiting (A 3b)
+    if payload.reporter_contact_hash:
+        one_hour_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+        recent_count = db.query(CitizenRequest).filter(
+            CitizenRequest.reporter_contact_hash == payload.reporter_contact_hash,
+            CitizenRequest.created_at >= one_hour_ago
+        ).count()
+        if recent_count >= settings.MAX_SUBMISSIONS_PER_HOUR:
+            # Create abuse flag
+            abuse = AbuseFlag(
+                flag_reason="Rate limit exceeded",
+                anomaly_score=0.9
+            )
+            db.add(abuse)
+            db.commit()
+            raise HTTPException(status_code=429, detail="Too many submissions in the last hour.")
 
     # 1. Voice transcription if audio provided
     if payload.audio_base64:
