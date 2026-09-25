@@ -6,18 +6,27 @@ import MapView from './MapView';
 import EvidencePanel from './EvidencePanel';
 import ImpactTracker from './ImpactTracker';
 import OpenDataPortal from './OpenDataPortal';
+import {
+  getAnalyticsOverview,
+  getHotspots,
+  getRecommendations,
+  recordRecommendationDecision,
+  AnalyticsOverview,
+  Hotspot,
+  Recommendation
+} from '@/lib/api';
 
 export default function PolicymakerDashboard() {
-  const [overview, setOverview] = useState<any>(null);
-  const [hotspots, setHotspots] = useState<any[]>([]);
-  const [selectedHotspot, setSelectedHotspot] = useState<any>(null);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch Overview KPIs
-    fetch('http://localhost:8000/api/v1/analytics/overview')
-      .then(res => res.json())
+    getAnalyticsOverview()
       .then(data => setOverview(data))
       .catch(() => {
         setOverview({
@@ -33,14 +42,13 @@ export default function PolicymakerDashboard() {
       });
 
     // Fetch Hotspots
-    fetch('http://localhost:8000/api/v1/hotspots')
-      .then(res => res.json())
+    getHotspots()
       .then(data => {
         setHotspots(data);
         if (data.length > 0) setSelectedHotspot(data[0]);
       })
       .catch(() => {
-        const fallback = [
+        const fallback: Hotspot[] = [
           {
             id: 2,
             title: "Bhamragad Drinking Water Network & Filtration",
@@ -90,19 +98,25 @@ export default function PolicymakerDashboard() {
         setHotspots(fallback);
         setSelectedHotspot(fallback[0]);
       });
+
+    // Fetch Recommendations
+    getRecommendations()
+      .then(data => setRecommendations(data))
+      .catch(() => setRecommendations([]));
   }, []);
+
+  const selectedRecommendation = recommendations.find(
+    rec => rec.cluster_id === selectedHotspot?.id || rec.id === selectedHotspot?.id
+  );
 
   const handleDecision = async (status: string) => {
     if (!selectedHotspot) return;
+    const targetRecId = selectedRecommendation?.id || selectedHotspot.id || 1;
     try {
-      await fetch(`http://localhost:8000/api/v1/recommendations/1/decision`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          decision: status,
-          decision_reason: decisionReason || "Decision recorded by District Collector.",
-          reviewer: "District Collector / Magistrate"
-        })
+      await recordRecommendationDecision(targetRecId, {
+        decision: status,
+        decision_reason: decisionReason || "Decision recorded by District Collector.",
+        reviewer: "District Collector / Magistrate"
       });
       setDecisionStatus(status);
     } catch (e) {
@@ -194,7 +208,7 @@ export default function PolicymakerDashboard() {
 
           <div className="text-xs text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1">
             <p className="font-semibold text-slate-900">Recommended Intervention:</p>
-            <p>"{selectedHotspot.title} in {selectedHotspot.district} District ({selectedHotspot.affected_villages} Villages)"</p>
+            <p>"{selectedRecommendation?.proposed_intervention || `${selectedHotspot.title} in ${selectedHotspot.district} District (${selectedHotspot.affected_villages} Villages)`}"</p>
           </div>
 
           <div>

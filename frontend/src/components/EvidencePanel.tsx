@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { AlertTriangle, CheckCircle, Info, ShieldAlert } from 'lucide-react';
+import { Hotspot } from '@/lib/api';
 
 interface EvidencePanelProps {
-  hotspot: any;
+  hotspot: Hotspot | null;
 }
 
 export default function EvidencePanel({ hotspot }: EvidencePanelProps) {

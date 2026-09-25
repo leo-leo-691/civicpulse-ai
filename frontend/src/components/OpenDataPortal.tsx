@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Download, FileCode, ShieldCheck, Database } from 'lucide-react';
+import { getOpenDataExport } from '@/lib/api';
 
 export default function OpenDataPortal() {
   const [downloading, setDownloading] = useState(false);
@@ -9,8 +10,7 @@ export default function OpenDataPortal() {
   const handleExport = async (format: string) => {
     setDownloading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/open-data/export');
-      const data = await res.json();
+      const data = await getOpenDataExport();
       
       const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
         JSON.stringify(data, null, 2)
