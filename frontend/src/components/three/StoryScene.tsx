@@ -18,11 +18,19 @@ import {
   Users,
   ChevronDown
 } from 'lucide-react';
+import { getAnalyticsOverview, AnalyticsOverview } from '@/lib/api';
 
 export default function StoryScene() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+
+  useEffect(() => {
+    getAnalyticsOverview()
+      .then((data) => setOverview(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -444,16 +452,20 @@ export default function StoryScene() {
             Thousands of Requests Converge onto Census Coordinates
           </h2>
           <p className="text-slate-300 text-sm leading-relaxed">
-            Using spatial DBSCAN (<code className="text-cyan-300 font-mono">eps=0.035</code>) and semantic embeddings, CivicPulse groups 4,821 raw citizen complaints into 1,204 unique cluster nodes across 14 vulnerable village clusters. Duplicate complaints amplify demand rather than clutter the queue.
+            Using spatial DBSCAN (<code className="text-cyan-300 font-mono">eps=0.035</code>) and semantic embeddings, CivicPulse clusters raw citizen complaints into geographic hotspot nodes across vulnerable village boundaries. Duplicate complaints amplify demand rather than clutter the queue.
           </p>
           <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
             <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-              <span className="text-slate-400 block text-[10px] uppercase font-mono">Total Reports</span>
-              <span className="text-xl font-mono font-bold text-white">4,821</span>
+              <span className="text-slate-400 block text-[10px] uppercase font-mono">Total Ingested Reports</span>
+              <span className="text-xl font-mono font-bold text-white">
+                {overview ? overview.total_requests.toLocaleString() : '4,000+'}
+              </span>
             </div>
             <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-              <span className="text-cyan-400 block text-[10px] uppercase font-mono">Unique Clusters</span>
-              <span className="text-xl font-mono font-bold text-cyan-300">14 Hotspots</span>
+              <span className="text-cyan-400 block text-[10px] uppercase font-mono">Active Clusters</span>
+              <span className="text-xl font-mono font-bold text-cyan-300">
+                {overview ? `${overview.active_hotspots} Hotspots` : 'Verified Hotspots'}
+              </span>
             </div>
           </div>
         </div>
@@ -473,12 +485,12 @@ export default function StoryScene() {
             In standard systems, wealthy smartphone-connected urban zones submit 10x more complaints and take all the funding. CivicPulse joins citizen signals with district census internet penetration indices.
           </p>
           <div className="bg-amber-950/40 border border-amber-500/40 p-4 rounded-xl text-xs space-y-2">
-            <div className="flex justify-between items-center text-amber-300 font-bold font-mono">
-              <span>Bhamragad Block Correction:</span>
+            <div className="flex flex-wrap justify-between items-center text-amber-300 font-bold font-mono gap-1">
+              <span className="text-[11px] uppercase tracking-wide">Case Study: Bhamragad Block, Gadchiroli</span>
               <span>+6.0 Points Added</span>
             </div>
             <p className="text-slate-300 text-[11px] leading-relaxed">
-              Low tele-density index (38/100) triggers an automatic mathematical boost, ensuring remote tribal drinking water crises rank above urban cosmetic paving.
+              In this verified benchmark, a low tele-density index (38.0/100) triggers an automatic mathematical boost, ensuring remote tribal drinking water crises rank above urban cosmetic paving.
             </p>
           </div>
         </div>
