@@ -32,11 +32,15 @@ class GeminiLLMProvider(BaseLLMProvider):
     def __init__(self, api_key: str):
         self.api_key = api_key
         self._client = None
+        self.last_provider_status = "DEVELOPMENT FALLBACK"
+        self.last_vision_status = "DEVELOPMENT FALLBACK"
         if api_key:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 self._client = genai.GenerativeModel("gemini-1.5-flash")
+                self.last_provider_status = "REAL"
+                self.last_vision_status = "REAL"
             except Exception:
                 self._client = None
 
@@ -281,8 +285,6 @@ class GoogleSpeechProvider(BaseSpeechProvider):
 class MockGoogleSpeechProvider(GoogleSpeechProvider):
     pass
 
-# --- Service Container ---
-
 class AIServiceContainer:
     def __init__(self):
         key = settings.GEMINI_API_KEY
@@ -290,5 +292,46 @@ class AIServiceContainer:
         self.embedding = GeminiEmbeddingProvider(key)
         self.speech = GoogleSpeechProvider()
 
+    def get_provider_status(self) -> Dict[str, Any]:
+        llm_status = getattr(self.llm, "last_provider_status", "DEVELOPMENT FALLBACK")
+        embedding_status = getattr(self.embedding, "last_provider_status", "DEVELOPMENT FALLBACK")
+        speech_status = getattr(self.speech, "provider_status", "DEVELOPMENT FALLBACK")
+        vision_status = getattr(self.llm, "last_vision_status", "DEVELOPMENT FALLBACK")
+
+        return {
+            "status": "success",
+            "providers": {
+                "llm": {
+                    "provider": "Google Gemini",
+                    "model": "gemini-1.5-flash",
+                    "status": llm_status,
+                    "task": "Structured Citizen Request Categorization & Translation"
+                },
+                "embedding": {
+                    "provider": "Google Gemini",
+                    "model": "models/text-embedding-004",
+                    "status": embedding_status,
+                    "task": "Geospatial & Semantic Similarity Embeddings (768-dim)"
+                },
+                "speech": {
+                    "provider": "Google Cloud Speech-to-Text",
+                    "model": "speech.v1",
+                    "status": speech_status,
+                    "task": "Multilingual Audio Ingestion (Hindi / Marathi / English)"
+                },
+                "vision": {
+                    "provider": "Google Gemini Vision",
+                    "model": "gemini-1.5-flash",
+                    "status": vision_status,
+                    "task": "Multimodal Infrastructure Damage Verification"
+                }
+            },
+            "environment": {
+                "gemini_api_key_configured": bool(settings.GEMINI_API_KEY),
+                "google_credentials_configured": bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+            }
+        }
+
 ai_service = AIServiceContainer()
+
 

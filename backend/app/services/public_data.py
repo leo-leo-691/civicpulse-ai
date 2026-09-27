@@ -1,6 +1,7 @@
 """
-CivicPulse AI — National Public Data Integration Service
-Integrates open datasets from data.gov.in, Census of India, PMGSY, and Jal Jeevan Mission.
+CivicPulse AI — Reference Public Benchmark Service
+Loads seeded demographic and infrastructure baseline data for districts.
+Note: Seeded reference values for demo/evaluation; not a live government API sync.
 """
 
 from typing import Dict, Any, List
@@ -20,11 +21,11 @@ NATIONAL_DATA_BENCHMARKS = [
         "literacy_rate": 83.5,
         "mobile_penetration_rate": 78.5,
         "internet_penetration_rate": 66.0,
-        "road_coverage_pct": 72.0,       # PMGSY Open Data Benchmark
-        "water_coverage_pct": 64.0,      # Jal Jeevan Mission Benchmark
-        "health_facility_density": 69.0, # NFHS-5 Health Infrastructure
+        "road_coverage_pct": 72.0,       # Seeded PMGSY Benchmark Model
+        "water_coverage_pct": 64.0,      # Seeded Jal Jeevan Mission Model
+        "health_facility_density": 69.0, # Seeded Health Infrastructure Model
         "electricity_reliability_pct": 82.0,
-        "data_source": "data.gov.in / PMGSY & Census 2011/2021 Projections"
+        "data_source": "Seeded Reference Baseline (Census/PMGSY Model)"
     },
     {
         "district": "Gadchiroli",
@@ -42,7 +43,7 @@ NATIONAL_DATA_BENCHMARKS = [
         "water_coverage_pct": 22.0,
         "health_facility_density": 25.0,
         "electricity_reliability_pct": 38.0,
-        "data_source": "data.gov.in / Jal Jeevan Mission & Tribal Welfare Indicators"
+        "data_source": "Seeded Reference Baseline (Tribal Area Model)"
     },
     {
         "district": "Dharashiv",
@@ -60,13 +61,14 @@ NATIONAL_DATA_BENCHMARKS = [
         "water_coverage_pct": 31.0,
         "health_facility_density": 44.0,
         "electricity_reliability_pct": 58.0,
-        "data_source": "data.gov.in / Drought Prone Area Programme (DPAP)"
+        "data_source": "Seeded Reference Baseline (Drought-Prone Area Model)"
     }
 ]
 
-def sync_national_datasets(db: Session) -> Dict[str, Any]:
+def load_reference_benchmarks(db: Session) -> Dict[str, Any]:
     """
-    Synchronizes local demographic and infrastructure records with national open data indicators.
+    Load Reference Benchmark Data (seeded, not a live government API sync).
+    Seeds or resets local demographic and infrastructure records to benchmark values.
     """
     updated_count = 0
     created_count = 0
@@ -92,7 +94,7 @@ def sync_national_datasets(db: Session) -> Dict[str, Any]:
         else:
             updated_count += 1
 
-        # Sync Demographics
+        # Seed Demographics
         demo = db.query(Demographic).filter(Demographic.location_id == loc.id).first()
         if not demo:
             demo = Demographic(location_id=loc.id)
@@ -104,7 +106,7 @@ def sync_national_datasets(db: Session) -> Dict[str, Any]:
         demo.mobile_penetration_rate = item["mobile_penetration_rate"]
         demo.internet_penetration_rate = item["internet_penetration_rate"]
 
-        # Sync Infrastructure Indices
+        # Seed Infrastructure Indices
         infra = db.query(Infrastructure).filter(Infrastructure.location_id == loc.id).first()
         if not infra:
             infra = Infrastructure(location_id=loc.id)
@@ -122,13 +124,14 @@ def sync_national_datasets(db: Session) -> Dict[str, Any]:
 
     return {
         "status": "success",
+        "action": "load_reference_benchmarks",
+        "is_live_sync": False,
         "synced_districts": len(NATIONAL_DATA_BENCHMARKS),
         "created_locations": created_count,
         "updated_locations": updated_count,
-        "data_providers": [
-            "data.gov.in (Open Government Data Platform India)",
-            "PMGSY Rural Connectivity Portal",
-            "Jal Jeevan Mission Har Ghar Jal Dashboard",
-            "Ministry of Statistics & Programme Implementation (MoSPI)"
-        ]
+        "note": "Loaded seeded reference benchmark data (not a live government API sync)."
     }
+
+# Backward compatibility alias
+sync_national_datasets = load_reference_benchmarks
+

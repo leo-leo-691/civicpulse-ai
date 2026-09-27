@@ -43,3 +43,9 @@ postgres-data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Prompts, Agent Instructions & Scratch Notes
+*prompt*.md
+*Prompt*.md
+*.scratch
+*.draft

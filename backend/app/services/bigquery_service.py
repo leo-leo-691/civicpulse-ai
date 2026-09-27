@@ -1,6 +1,6 @@
 """
-CivicPulse AI — Google Cloud BigQuery Analytics Integration Service
-Provides BigQuery schema definition, data transformation, and streaming export endpoints
+CivicPulse AI — Google Cloud BigQuery Schema & Export Service
+Provides BigQuery schema definition, partitioned DDL generation, and JSON batch export
 for large-scale national infrastructure demand analysis.
 """
 

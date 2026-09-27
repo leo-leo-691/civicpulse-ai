@@ -8,13 +8,15 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.domain import (
     CitizenRequest, RequestCluster, Location, Demographic, Infrastructure,
-    InvestmentProject, InvestmentImpactHistory, Recommendation, RecommendationDecision
+    InvestmentProject, InvestmentImpactHistory, Recommendation, RecommendationDecision,
+    AbuseFlag
 )
 from app.schemas.requests import (
     RequestCreate, CitizenStatusResponse, DecisionCreate,
     ImpactHistoryResponse, OpenDataExportItem
 )
 from app.ai.pipeline import process_incoming_request
+from app.ai.providers import ai_service
 from app.services.priority import calculate_priority_score
 from app.ai.clustering import SemanticClusterEngine
 from app.services.public_data import sync_national_datasets
@@ -31,6 +33,49 @@ def admin_reprocess_clusters(db: Session = Depends(get_db)):
     result = engine.execute_batch_clustering(db)
     db.commit()
     return {"status": "success", "result": result}
+
+@router.get("/admin/provider-status")
+def admin_get_provider_status():
+    """
+    Returns AI Provider Operational Status (Real vs Development Fallback) for LLM, Embedding, Speech, and Vision.
+    """
+    return ai_service.get_provider_status()
+
+@router.get("/admin/abuse-flags")
+def admin_get_abuse_flags(limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Returns recent abuse flags and rate-limiter anomaly detections.
+    """
+    flags = db.query(AbuseFlag).order_by(AbuseFlag.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "id": f.id,
+            "request_id": f.request_id,
+            "cluster_id": f.cluster_id,
+            "flag_reason": f.flag_reason,
+            "anomaly_score": f.anomaly_score,
+            "created_at": f.created_at.isoformat() if f.created_at else None
+        }
+        for f in flags
+    ]
+
+@router.get("/admin/decisions-audit")
+def admin_get_decisions_audit(limit: int = 50, db: Session = Depends(get_db)):
+    """
+    Returns audit log of Human-in-the-Loop Recommendation Decisions.
+    """
+    decisions = db.query(RecommendationDecision).order_by(RecommendationDecision.timestamp.desc()).limit(limit).all()
+    return [
+        {
+            "id": d.id,
+            "recommendation_id": d.recommendation_id,
+            "decision": d.decision,
+            "decision_reason": d.decision_reason,
+            "reviewer": d.reviewer,
+            "timestamp": d.timestamp.isoformat() if d.timestamp else None
+        }
+        for d in decisions
+    ]
 
 @router.post("/requests")
 def submit_citizen_request(payload: RequestCreate, db: Session = Depends(get_db)):
@@ -281,7 +326,7 @@ def open_data_export(db: Session = Depends(get_db)):
 @router.post("/public-data/sync")
 def sync_national_public_data(db: Session = Depends(get_db)):
     """
-    Synchronizes district demographics and infrastructure coverage from national open datasets (data.gov.in, PMGSY, JJM).
+    Loads seeded district demographics and infrastructure coverage reference benchmarks (demonstration baseline, not a live government API sync).
     """
     return sync_national_datasets(db)
 
@@ -300,7 +345,7 @@ def get_bigquery_schema():
 @router.get("/bigquery/export")
 def export_to_bigquery(limit: int = 500, db: Session = Depends(get_db)):
     """
-    Streams citizen requests formatted for Google Cloud BigQuery batch / streaming ingestion.
+    Exports citizen requests formatted for Google Cloud BigQuery batch ingestion.
     """
     rows = export_requests_for_bigquery(db, limit=limit)
     return {

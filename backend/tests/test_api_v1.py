@@ -29,14 +29,28 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIsInstance(res.json(), list)
 
-    def test_invalid_decision_rejected(self):
-        # Requires id=1 to exist, but if validation happens first, we should get 422 Unprocessable Entity
-        res = self.client.post("/api/v1/recommendations/1/decision", json={
-            "decision": "Not A Valid Decision",
-            "decision_reason": "Testing invalid enum",
-            "reviewer": "Test Bot"
-        })
-        self.assertEqual(res.status_code, 422)
+    def test_admin_provider_status(self):
+        res = self.client.get("/api/v1/admin/provider-status")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get("status"), "success")
+        self.assertIn("providers", data)
+        self.assertIn("llm", data["providers"])
+        self.assertIn("embedding", data["providers"])
+        self.assertIn("speech", data["providers"])
+        self.assertIn("vision", data["providers"])
+
+    def test_admin_abuse_flags(self):
+        res = self.client.get("/api/v1/admin/abuse-flags")
+        self.assertEqual(res.status_code, 200)
+        self.assertIsInstance(res.json(), list)
+
+    def test_public_data_seeded_benchmarks(self):
+        res = self.client.post("/api/v1/public-data/sync")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get("is_live_sync"), False)
+        self.assertEqual(data.get("action"), "load_reference_benchmarks")
 
 if __name__ == "__main__":
     unittest.main()

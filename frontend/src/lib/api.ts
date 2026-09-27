@@ -356,3 +356,86 @@ export async function getBigQueryExport(limit: number = 500): Promise<any> {
   return apiFetch<any>(`/api/v1/bigquery/export?limit=${limit}`);
 }
 
+// ============================================================================
+// Admin & Operations API (/api/v1/admin)
+// ============================================================================
+
+export interface AIProviderInfo {
+  provider: string;
+  model: string;
+  status: 'REAL' | 'DEVELOPMENT FALLBACK' | string;
+  task: string;
+}
+
+export interface AdminProviderStatusResponse {
+  status: string;
+  providers: {
+    llm: AIProviderInfo;
+    embedding: AIProviderInfo;
+    speech: AIProviderInfo;
+    vision: AIProviderInfo;
+  };
+  environment: {
+    gemini_api_key_configured: boolean;
+    google_credentials_configured: boolean;
+  };
+}
+
+export interface AdminAbuseFlag {
+  id: number;
+  request_id: number | null;
+  cluster_id: number | null;
+  flag_reason: string;
+  anomaly_score: number;
+  created_at: string | null;
+}
+
+export interface AdminDecisionAuditItem {
+  id: number;
+  recommendation_id: number;
+  decision: string;
+  decision_reason: string;
+  reviewer?: string | null;
+  timestamp: string | null;
+}
+
+export interface ReprocessClustersResponse {
+  status: string;
+  result: any;
+}
+
+/**
+ * Fetch operational status for LLM, Embedding, Speech, and Vision providers
+ * Endpoint: GET /api/v1/admin/provider-status
+ */
+export async function getAdminProviderStatus(): Promise<AdminProviderStatusResponse> {
+  return apiFetch<AdminProviderStatusResponse>('/api/v1/admin/provider-status');
+}
+
+/**
+ * Fetch recent abuse flags and rate-limiter anomaly detections
+ * Endpoint: GET /api/v1/admin/abuse-flags
+ */
+export async function getAdminAbuseFlags(limit: number = 50): Promise<AdminAbuseFlag[]> {
+  return apiFetch<AdminAbuseFlag[]>(`/api/v1/admin/abuse-flags?limit=${limit}`);
+}
+
+/**
+ * Trigger DBSCAN semantic reclustering of requests across districts
+ * Endpoint: POST /api/v1/admin/reprocess-clusters
+ */
+export async function adminReprocessClusters(): Promise<ReprocessClustersResponse> {
+  return apiFetch<ReprocessClustersResponse>('/api/v1/admin/reprocess-clusters', {
+    method: 'POST',
+  });
+}
+
+/**
+ * Fetch historical Human-in-the-Loop decision audit log
+ * Endpoint: GET /api/v1/admin/decisions-audit
+ */
+export async function getAdminDecisionsAudit(limit: number = 50): Promise<AdminDecisionAuditItem[]> {
+  return apiFetch<AdminDecisionAuditItem[]>(`/api/v1/admin/decisions-audit?limit=${limit}`);
+}
+
+

@@ -22,6 +22,8 @@ const GoogleMap = dynamic(() => import('./GoogleMapInner'), {
 });
 
 export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: MapViewProps) {
+  const hasApiKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+
   return (
     <div className="relative w-full bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex flex-col p-4 text-white space-y-4">
       {/* Map Header & Legend */}
@@ -32,12 +34,18 @@ export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: 
               <Globe className="w-4 h-4 text-emerald-400" />
               Google Maps Platform — Geospatial Hotspot Engine
             </h3>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              Google Maps
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+              hasApiKey
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+            }`}>
+              {hasApiKey ? 'Google Maps JS SDK' : 'Satellite Embed Mode'}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Interactive Satellite, Terrain, &amp; Roadmap visualization for regional demand hotspots
+            {hasApiKey
+              ? 'Interactive Satellite, Terrain, & Roadmap visualization for regional demand hotspots'
+              : 'Satellite embed mode active (API key not configured in .env; interactive overlays active)'}
           </p>
         </div>
 

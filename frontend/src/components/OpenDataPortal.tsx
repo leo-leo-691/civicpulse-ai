@@ -45,37 +45,37 @@ export default function OpenDataPortal() {
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-      <div className="border-b border-slate-200 pb-3 flex justify-between items-center">
+    <div className="bg-[#0c1222]/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 backdrop-blur-md">
+      <div className="border-b border-slate-800/80 pb-3 flex flex-wrap gap-2 justify-between items-center">
         <div>
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1">
-            <ShieldCheck className="w-4 h-4" /> Digital Public Good (DPGA Indicator #6)
+          <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-cyan-400" /> Digital Public Good (DPGA Indicator #6)
           </span>
-          <h2 className="text-xl font-bold text-slate-900">Open Data Export Portal</h2>
+          <h2 className="text-lg font-bold text-white tracking-tight mt-0.5">Open Data Export Portal</h2>
         </div>
-        <span className="px-3 py-1 bg-blue-50 text-blue-800 text-xs font-semibold rounded-full border border-blue-200">
+        <span className="px-2.5 py-0.5 bg-slate-800/80 text-cyan-300 text-xs font-mono rounded-full border border-slate-700/80">
           Apache 2.0 Licensed
         </span>
       </div>
 
-      <p className="text-xs text-slate-600">
-        In compliance with the 9 Digital Public Goods Alliance indicators, CivicPulse AI provides anonymized, aggregated cluster & infrastructure gap dataset exports for public policy researchers, civil society, and international developers.
+      <p className="text-xs text-slate-300 leading-relaxed">
+        In compliance with the 9 Digital Public Goods Alliance indicators, CivicPulse AI provides anonymized, aggregated cluster &amp; infrastructure gap dataset exports for public policy researchers, civil society, and international developers.
       </p>
 
       <div className="flex flex-wrap gap-3 pt-2">
         <button
           onClick={() => handleExport('json')}
           disabled={downloading}
-          className="px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition"
+          className="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 transition shadow-[0_0_15px_rgba(0,229,255,0.25)] disabled:opacity-50"
         >
-          <Download className="w-4 h-4" /> Download GeoJSON / JSON Export
+          <Download className="w-4 h-4" /> {downloading ? 'Preparing Export...' : 'Download GeoJSON / JSON Export'}
         </button>
         <button
           onClick={() => handleExport('csv')}
           disabled={downloading}
-          className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition"
+          className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl flex items-center gap-2 transition disabled:opacity-50"
         >
-          <FileCode className="w-4 h-4" /> Download Anonymized CSV Dataset
+          <FileCode className="w-4 h-4 text-slate-400" /> Download Anonymized CSV Dataset
         </button>
       </div>
     </div>

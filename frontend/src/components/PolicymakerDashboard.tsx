@@ -145,11 +145,11 @@ export default function PolicymakerDashboard() {
     setSyncFeedback(null);
     try {
       const res = await syncNationalPublicData();
-      setSyncFeedback(`Successfully synchronized ${res.synced_districts || 3} district datasets from data.gov.in & PMGSY.`);
+      setSyncFeedback(`Successfully loaded seeded reference benchmarks for ${res.synced_districts || 3} districts.`);
       getAnalyticsOverview().then(data => setOverview(data)).catch(() => {});
       getHotspots().then(data => setHotspots(data)).catch(() => {});
     } catch (e) {
-      setSyncFeedback('Synchronized national public demographic and infrastructure benchmarks.');
+      setSyncFeedback('Loaded seeded district demographic and infrastructure reference benchmarks.');
     } finally {
       setIsSyncingData(false);
       setTimeout(() => setSyncFeedback(null), 6000);
@@ -180,88 +180,92 @@ export default function PolicymakerDashboard() {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-slate-900 text-white p-6 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-[#0c1222]/90 backdrop-blur-md text-white p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-400">BRICS Public Infrastructure Decision Platform</span>
-          <h1 className="text-2xl font-black">CivicPulse AI — Policymaker Intelligence Dashboard</h1>
-          <p className="text-slate-400 text-xs mt-1">Aggregating Citizen Demand • Geospatial lat/long indexing (PostGIS-ready schema) • Digital Divide Correction</p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
+              BRICS Public Infrastructure Decision Platform
+            </span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight text-white mt-1">CivicPulse AI — Policymaker Intelligence Dashboard</h1>
+          <p className="text-slate-400 text-xs mt-1">Aggregating Citizen Demand • Geospatial indexing (PostGIS-ready schema) • Digital Divide Correction</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSyncPublicData}
             disabled={isSyncingData}
-            className="px-3.5 py-1.5 bg-blue-600/90 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition border border-blue-500 shadow-xs"
+            className="px-3.5 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition border border-cyan-500/30 disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingData ? 'animate-spin' : ''}`} />
-            {isSyncingData ? 'Syncing data.gov.in...' : 'Sync National Open Data'}
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isSyncingData ? 'animate-spin' : ''}`} />
+            {isSyncingData ? 'Loading Benchmarks...' : 'Load Reference Benchmarks'}
           </button>
 
           <button
             onClick={handleOpenBigQueryModal}
-            className="px-3.5 py-1.5 bg-emerald-700/90 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition border border-emerald-600 shadow-xs"
+            className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition border border-emerald-500/30"
           >
-            <Database className="w-3.5 h-3.5" />
-            BigQuery Analytics
+            <Database className="w-3.5 h-3.5 text-emerald-400" />
+            BigQuery Schema &amp; Export
           </button>
 
-          <span className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold rounded-full">
+          <span className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 text-xs font-mono rounded-full">
             Role: District Magistrate
           </span>
         </div>
       </div>
 
       {isDemoMode && (
-        <div className="bg-amber-100 border border-amber-300 text-amber-900 p-3 rounded-lg text-sm font-semibold flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-5 h-5 text-amber-600" />
-          ⚠️ Backend unreachable — showing simulated fallback data.
+        <div className="bg-amber-950/40 border border-amber-500/30 text-amber-300 p-3.5 rounded-xl text-xs font-medium flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>Backend unreachable — showing simulated benchmark data.</span>
         </div>
       )}
 
       {syncFeedback && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold rounded-lg flex items-center gap-2 animate-fadeIn mb-4">
-          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-xl flex items-center gap-2 animate-fadeIn">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{syncFeedback}</span>
         </div>
       )}
 
       {/* KPI Overview Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-xs font-bold text-slate-500 uppercase">Citizen Demand Signal</span>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+        <div className="bg-[#0c1222]/90 border border-slate-800 p-5 rounded-2xl shadow-lg backdrop-blur-md">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Citizen Demand Signal</span>
+          <div className="text-3xl font-black text-white mt-2 font-mono tracking-tight">
             {overview?.total_requests.toLocaleString() || '4,821'}
           </div>
-          <span className="text-xs text-blue-700 font-semibold mt-1 block">
+          <span className="text-xs text-cyan-400 font-mono font-medium mt-1.5 block">
             {overview?.unique_requests.toLocaleString() || '1,204'} Unique Post-Dedup
           </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-xs font-bold text-slate-500 uppercase">Active Hotspot Clusters</span>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+        <div className="bg-[#0c1222]/90 border border-slate-800 p-5 rounded-2xl shadow-lg backdrop-blur-md">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Active Hotspot Clusters</span>
+          <div className="text-3xl font-black text-white mt-2 font-mono tracking-tight">
             {overview?.active_hotspots || 14}
           </div>
-          <span className="text-xs text-emerald-700 font-semibold mt-1 block">
+          <span className="text-xs text-emerald-400 font-mono font-medium mt-1.5 block">
             3 Critical Priority (&gt; 85/100)
           </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-xs font-bold text-slate-500 uppercase">Digital Divide Corrections</span>
-          <div className="text-2xl font-black text-amber-600 mt-1">
+        <div className="bg-[#0c1222]/90 border border-slate-800 p-5 rounded-2xl shadow-lg backdrop-blur-md">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Digital Divide Corrections</span>
+          <div className="text-3xl font-black text-amber-400 mt-2 font-mono tracking-tight">
             +{overview?.digital_access_corrections_applied || 4} Regions
           </div>
-          <span className="text-xs text-amber-700 font-semibold mt-1 block">
+          <span className="text-xs text-amber-300/80 font-medium mt-1.5 block">
             Preventing Urban Bias
           </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-xs font-bold text-slate-500 uppercase">Affected Population</span>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+        <div className="bg-[#0c1222]/90 border border-slate-800 p-5 rounded-2xl shadow-lg backdrop-blur-md">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Affected Population</span>
+          <div className="text-3xl font-black text-white mt-2 font-mono tracking-tight">
             {overview?.total_population_impacted.toLocaleString() || '428,000'}
           </div>
-          <span className="text-xs text-slate-500 mt-1 block">
+          <span className="text-xs text-slate-400 font-medium mt-1.5 block">
             Across 2 Districts
           </span>
         </div>
@@ -279,64 +283,64 @@ export default function PolicymakerDashboard() {
 
       {/* Human-In-The-Loop Governance Decision Card (§29) */}
       {selectedHotspot && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-          <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+        <div className="bg-[#0c1222]/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 backdrop-blur-md">
+          <div className="flex flex-wrap gap-2 justify-between items-center border-b border-slate-800/80 pb-3">
             <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Human-In-The-Loop Governance (§29)</span>
-              <h3 className="text-lg font-bold text-slate-900">Policymaker Action & Budget Decision</h3>
+              <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider">Human-In-The-Loop Governance (§29)</span>
+              <h3 className="text-lg font-bold text-white tracking-tight mt-0.5">Policymaker Action &amp; Budget Decision</h3>
             </div>
-            <span className="text-xs bg-slate-100 text-slate-700 font-semibold px-3 py-1 rounded">
+            <span className="text-xs bg-slate-900 border border-slate-800 text-slate-300 font-mono px-3 py-1 rounded-full">
               AI Decision Support Only (Not Autonomous)
             </span>
           </div>
 
-          <div className="text-xs text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1">
-            <p className="font-semibold text-slate-900">Recommended Intervention:</p>
-            <p>"{selectedRecommendation?.proposed_intervention || `${selectedHotspot.title} in ${selectedHotspot.district} District (${selectedHotspot.affected_villages} Villages)`}"</p>
+          <div className="text-xs text-slate-300 bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-1 leading-relaxed">
+            <p className="font-semibold text-cyan-300">Recommended Intervention:</p>
+            <p className="text-slate-200">"{selectedRecommendation?.proposed_intervention || `${selectedHotspot.title} in ${selectedHotspot.district} District (${selectedHotspot.affected_villages} Villages)`}"</p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Administrative Justification / Reason</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Administrative Justification / Reason</label>
             <input
               type="text"
               value={decisionReason}
               onChange={(e) => setDecisionReason(e.target.value)}
               placeholder="e.g. Approved ₹18.5 Cr under PM-Jal Jeevan Mission based on 82% water gap."
-              className="w-full text-sm border border-slate-300 rounded-lg p-2.5"
+              className="w-full text-xs font-sans bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-hidden focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
               onClick={() => handleDecision('Approved')}
-              className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-lg transition"
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
               Approve Project Budget
             </button>
             <button
               onClick={() => handleDecision('Needs Analysis')}
-              className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg transition"
+              className="px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold text-xs rounded-xl transition"
             >
               Request Field Verification
             </button>
             <button
               onClick={() => handleDecision('Rejected')}
-              className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs rounded-lg transition"
+              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold text-xs rounded-xl transition"
             >
               Reject Proposal
             </button>
           </div>
 
           {decisionStatus && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold rounded-lg flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <div className="p-3 bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
               Decision recorded as [{decisionStatus}] by District Collector. Audit log updated.
             </div>
           )}
 
           {decisionError && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-900 text-xs font-bold rounded-lg flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
+            <div className="p-3 bg-red-950/50 border border-red-500/40 text-red-300 text-xs font-bold rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
               {decisionError}
             </div>
           )}
@@ -351,65 +355,65 @@ export default function PolicymakerDashboard() {
 
       {/* Google Cloud BigQuery Analytics Modal */}
       {bqModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-[#0c1222] rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-slate-800 max-h-[85vh] flex flex-col text-slate-100">
+            <div className="flex justify-between items-center border-b border-slate-800/80 pb-3">
               <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-base text-slate-900">Google Cloud BigQuery Analytics Integration</h3>
+                <Database className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-base text-white">Google Cloud BigQuery Schema &amp; Export</h3>
               </div>
               <button
                 onClick={() => setBqModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+                className="text-slate-400 hover:text-white p-1 rounded-md transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-600">
-              Streams national citizen demand, geospatial coordinates, multimodal damage scores, and priority ranks into Google Cloud BigQuery for national infrastructure planning.
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Provides Google Cloud BigQuery partitioned schema DDL and formatted JSON batch export of national citizen demand, geospatial coordinates, multimodal damage scores, and priority ranks.
             </p>
 
             {bqLoading ? (
               <div className="py-12 flex flex-col items-center justify-center text-slate-400 text-xs gap-2">
-                <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                <span>Generating BigQuery Schema &amp; Streaming Export...</span>
+                <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+                <span>Generating BigQuery Schema &amp; Export Data...</span>
               </div>
             ) : (
               <div className="space-y-4 overflow-y-auto pr-1 flex-1">
                 <div>
-                  <span className="text-xs font-bold text-slate-700 block mb-1">Target BigQuery Table</span>
-                  <code className="text-xs font-mono bg-slate-100 text-slate-800 px-2.5 py-1.5 rounded block border border-slate-200">
+                  <span className="text-xs font-bold text-slate-300 block mb-1">Target BigQuery Table</span>
+                  <code className="text-xs font-mono bg-slate-950 text-cyan-300 px-3 py-1.5 rounded-lg block border border-slate-800">
                     {bqData?.target_table || 'civicpulse_analytics.national_citizen_requests'}
                   </code>
                 </div>
 
                 <div>
-                  <span className="text-xs font-bold text-slate-700 block mb-1">BigQuery Table DDL (Partitioned &amp; Clustered)</span>
-                  <pre className="text-[11px] font-mono bg-slate-900 text-emerald-300 p-3 rounded-lg overflow-x-auto border border-slate-800">
+                  <span className="text-xs font-bold text-slate-300 block mb-1">BigQuery Table DDL (Partitioned &amp; Clustered)</span>
+                  <pre className="text-[11px] font-mono bg-slate-950 text-emerald-400 p-3.5 rounded-xl overflow-x-auto border border-slate-800">
                     {bqData?.ddl || '-- BigQuery DDL schema ready'}
                   </pre>
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-bold text-slate-700">Preview Exported Analytics Rows ({bqData?.rows?.length || 0} sample rows)</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
-                      Status: Ready for Ingestion
+                    <span className="text-xs font-bold text-slate-300">Preview Exported Analytics Rows ({bqData?.rows?.length || 0} sample rows)</span>
+                    <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded">
+                      Status: Schema Valid &amp; Ready for Batch Ingestion
                     </span>
                   </div>
-                  <pre className="text-[11px] font-mono bg-slate-50 text-slate-800 p-3 rounded-lg overflow-x-auto max-h-40 border border-slate-200">
+                  <pre className="text-[11px] font-mono bg-slate-950 text-slate-300 p-3.5 rounded-xl overflow-x-auto max-h-40 border border-slate-800">
                     {JSON.stringify(bqData?.rows?.slice(0, 3) || [], null, 2)}
                   </pre>
                 </div>
               </div>
             )}
 
-            <div className="border-t border-slate-200 pt-3 flex justify-between items-center">
-              <span className="text-[11px] text-slate-500">Google Cloud BigQuery Standard Format</span>
+            <div className="border-t border-slate-800/80 pt-3 flex justify-between items-center">
+              <span className="text-[11px] font-mono text-slate-500">Google Cloud BigQuery Standard Format</span>
               <button
                 onClick={() => setBqModalOpen(false)}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl border border-slate-700 transition"
               >
                 Close
               </button>

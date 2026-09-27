@@ -54,16 +54,16 @@ export default function ImpactTracker() {
   const estComplaintVolumeAfter = Math.max(0, Math.round(baseVolumeBefore * (1 - estComplaintDropPct / 100)));
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+    <div className="bg-[#0c1222]/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 text-slate-100 backdrop-blur-md">
       {/* Section Header */}
-      <div className="border-b border-slate-200 pb-3 flex justify-between items-center">
+      <div className="border-b border-slate-800/80 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
-            <History className="w-4 h-4" /> Retrospective & Simulated ROI Analytics (§31)
+          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+            <History className="w-4 h-4" /> Retrospective &amp; Simulated ROI Analytics (§31)
           </span>
-          <h2 className="text-xl font-bold text-slate-900">Post-Investment Verification & Pre-Approval Simulator</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight mt-0.5">Post-Investment Verification &amp; Pre-Approval Simulator</h2>
         </div>
-        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
+        <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-full">
           Continuous Measurement Active
         </span>
       </div>
@@ -71,62 +71,62 @@ export default function ImpactTracker() {
       {/* Part A: Measured Post-Investment Historical ROI */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
             Part A — Measured Post-Investment Historical ROI
           </h3>
-          <span className="text-xs text-slate-500">Verified Field Data</span>
+          <span className="text-xs text-cyan-400 font-mono">Verified Field Data</span>
         </div>
 
-        <p className="text-xs text-slate-600">
-          Unlike simple decision simulators, CivicPulse AI tracks money <em>already spent</em> by continuously comparing citizen complaint volumes and infrastructure coverage indices pre- vs. post-commissioning.
+        <p className="text-xs text-slate-400">
+          CivicPulse AI tracks public capital <em>already committed and spent</em> by continuously comparing citizen complaint volumes and infrastructure coverage indices pre- vs. post-commissioning.
         </p>
 
         {impactData.map((item, idx) => (
-          <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+          <div key={idx} className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 space-y-4">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-xs font-bold text-slate-500 uppercase">{item.sector} Sector • ₹{item.budget_crores} Crore Budget</span>
-                <h4 className="text-lg font-bold text-slate-900">{item.project_title}</h4>
+                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">{item.sector} Sector • ₹{item.budget_crores} Crore Allocation</span>
+                <h4 className="text-base font-bold text-white">{item.project_title}</h4>
               </div>
-              <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+              <span className="px-2.5 py-1 bg-cyan-950/60 border border-cyan-800/50 text-cyan-300 text-xs font-semibold rounded">
                 {item.status}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Metric 1: Complaint Volume Drop */}
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs">
-                <span className="text-xs font-semibold text-slate-500 block">Citizen Complaint Volume</span>
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                <span className="text-xs font-semibold text-slate-400 block">Citizen Complaint Volume</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-black text-slate-900">{item.complaint_volume_after}</span>
-                  <span className="text-xs text-slate-400 font-medium">from {item.complaint_volume_before}</span>
+                  <span className="text-2xl font-black text-white font-mono">{item.complaint_volume_after}</span>
+                  <span className="text-xs text-slate-500 font-medium font-mono">from {item.complaint_volume_before}</span>
                 </div>
-                <div className="flex items-center gap-1 text-emerald-600 font-bold text-xs mt-2">
+                <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs mt-2">
                   <TrendingDown className="w-4 h-4" /> -{item.complaint_reduction_pct}% Complaint Drop (Measured)
                 </div>
               </div>
 
               {/* Metric 2: Infrastructure Coverage Score */}
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs">
-                <span className="text-xs font-semibold text-slate-500 block">Infrastructure Coverage Index</span>
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                <span className="text-xs font-semibold text-slate-400 block">Infrastructure Coverage Index</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-black text-slate-900">{item.infra_index_after} / 100</span>
-                  <span className="text-xs text-slate-400 font-medium">from {item.infra_index_before}</span>
+                  <span className="text-2xl font-black text-white font-mono">{item.infra_index_after} / 100</span>
+                  <span className="text-xs text-slate-500 font-medium font-mono">from {item.infra_index_before}</span>
                 </div>
-                <div className="flex items-center gap-1 text-emerald-600 font-bold text-xs mt-2">
+                <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs mt-2">
                   <ArrowUpRight className="w-4 h-4" /> +{(item.infra_index_after - item.infra_index_before).toFixed(1)} Point Improvement
                 </div>
               </div>
 
               {/* Metric 3: Household Water Access */}
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs">
-                <span className="text-xs font-semibold text-slate-500 block">Household Coverage Rate</span>
+              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                <span className="text-xs font-semibold text-slate-400 block">Household Coverage Rate</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-black text-slate-900">{item.coverage_after_pct}%</span>
-                  <span className="text-xs text-slate-400 font-medium">from {item.coverage_before_pct}%</span>
+                  <span className="text-2xl font-black text-white font-mono">{item.coverage_after_pct}%</span>
+                  <span className="text-xs text-slate-500 font-medium font-mono">from {item.coverage_before_pct}%</span>
                 </div>
-                <div className="flex items-center gap-1 text-emerald-600 font-bold text-xs mt-2">
-                  <CheckCircle2 className="w-4 h-4" /> Verified by Jal Jeevan Dashboard
+                <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs mt-2">
+                  <CheckCircle2 className="w-4 h-4" /> Verified Post-Project
                 </div>
               </div>
             </div>
@@ -135,31 +135,31 @@ export default function ImpactTracker() {
       </div>
 
       {/* Part B: Pre-Approval What-If Budget Simulator */}
-      <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-5 space-y-4 pt-4">
-        <div className="flex justify-between items-center border-b border-blue-200 pb-2">
+      <div className="bg-cyan-950/20 border border-cyan-800/40 rounded-xl p-5 space-y-4">
+        <div className="flex justify-between items-center border-b border-cyan-800/40 pb-2">
           <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-blue-700" />
-            <h3 className="text-sm font-bold text-blue-950 uppercase tracking-wide">
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-xs font-bold text-cyan-200 uppercase tracking-wider">
               Part B — Pre-Approval What-If Budget Simulator
             </h3>
           </div>
-          <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded border border-blue-300">
-            Interactive Pre-Approval Simulation
+          <span className="px-2.5 py-0.5 bg-cyan-950/80 text-cyan-300 border border-cyan-700/50 text-[10px] font-bold rounded">
+            Interactive Simulation
           </span>
         </div>
 
-        <p className="text-xs text-slate-700">
+        <p className="text-xs text-slate-400">
           Adjust proposed project budget to model projected infrastructure coverage gains and complaint volume drops <em>before</em> committing public funds.
         </p>
 
         {/* Slider & Inputs */}
-        <div className="bg-white p-4 rounded-lg border border-blue-200 space-y-3">
+        <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
               <span>Proposed Project Budget Allocation:</span>
-              <span className="text-blue-700 font-black text-sm ml-1">₹{simBudget.toFixed(1)} Crore</span>
+              <span className="text-cyan-400 font-black text-sm ml-1 font-mono">₹{simBudget.toFixed(1)} Crore</span>
             </label>
-            <span className="text-[11px] text-slate-500 font-medium">Baseline: ₹{baseBudget} Cr</span>
+            <span className="text-[11px] text-slate-400 font-mono">Baseline: ₹{baseBudget} Cr</span>
           </div>
 
           <input
@@ -169,48 +169,48 @@ export default function ImpactTracker() {
             step="0.5"
             value={simBudget}
             onChange={(e) => setSimBudget(parseFloat(e.target.value))}
-            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
+            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
           />
 
-          <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
+          <div className="flex justify-between text-[10px] text-slate-500 font-semibold font-mono">
             <span>Min: ₹5.0 Cr</span>
-            <span>Current: ₹{simBudget.toFixed(1)} Cr</span>
+            <span className="text-cyan-400 font-bold">Selected: ₹{simBudget.toFixed(1)} Cr</span>
             <span>Max: ₹50.0 Cr</span>
           </div>
         </div>
 
         {/* Clamped Simulated Output Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-2xs">
-            <span className="text-xs font-semibold text-slate-500 block uppercase tracking-wider">Estimated Infrastructure Index</span>
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-cyan-800/40">
+            <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">Estimated Infrastructure Index</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-blue-900">{estInfraIndex} / 100</span>
-              <span className="text-xs text-slate-400 font-medium">Baseline {baseInfraBefore}</span>
+              <span className="text-2xl font-black text-cyan-300 font-mono">{estInfraIndex} / 100</span>
+              <span className="text-xs text-slate-500 font-medium font-mono">Baseline {baseInfraBefore}</span>
             </div>
-            <div className="flex items-center gap-1 text-blue-700 font-bold text-xs mt-2">
+            <div className="flex items-center gap-1 text-cyan-400 font-bold text-xs mt-2">
               <ArrowUpRight className="w-4 h-4" /> +{(estInfraIndex - baseInfraBefore).toFixed(1)} Pts (Simulated Gain)
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-2xs">
-            <span className="text-xs font-semibold text-slate-500 block uppercase tracking-wider">Estimated Complaint Drop</span>
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-cyan-800/40">
+            <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">Estimated Complaint Drop</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-blue-900">-{estComplaintDropPct}%</span>
-              <span className="text-xs text-slate-400 font-medium">What-if Drop</span>
+              <span className="text-2xl font-black text-cyan-300 font-mono">-{estComplaintDropPct}%</span>
+              <span className="text-xs text-slate-500 font-medium font-mono">What-if Drop</span>
             </div>
-            <div className="flex items-center gap-1 text-blue-700 font-bold text-xs mt-2">
+            <div className="flex items-center gap-1 text-cyan-400 font-bold text-xs mt-2">
               <TrendingDown className="w-4 h-4" /> ~{estComplaintVolumeAfter} Est. Remaining Requests
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-2xs flex flex-col justify-between">
-            <span className="text-xs font-semibold text-slate-500 block uppercase tracking-wider">Simulation Scale Factor</span>
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-cyan-800/40 flex flex-col justify-between">
+            <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">Simulation Scale Factor</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-blue-900">{ratio.toFixed(2)}x</span>
-              <span className="text-xs text-slate-400 font-medium">Budget Multiplier</span>
+              <span className="text-2xl font-black text-cyan-300 font-mono">{ratio.toFixed(2)}x</span>
+              <span className="text-xs text-slate-500 font-medium font-mono">Budget Multiplier</span>
             </div>
-            <span className="text-[11px] text-slate-500 font-semibold mt-2 block">
-              ⚡ Deterministic formula scaled to proposed budget
+            <span className="text-[11px] text-slate-400 font-medium mt-2 block">
+              ⚡ Deterministic non-linear formula scaled to proposed budget
             </span>
           </div>
         </div>
