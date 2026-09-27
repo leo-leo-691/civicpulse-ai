@@ -77,6 +77,8 @@ class CitizenRequest(Base):
     confidence_score = Column(Float, default=0.92)
     reporter_hash = Column(String, nullable=True, index=True)
     embedding_json = Column(JSON, nullable=True) # Fallback stored embedding vector
+    image_data = Column(Text, nullable=True) # Base64 or image data URL
+    visual_evidence_json = Column(JSON, nullable=True) # Gemini Multimodal analysis
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow)

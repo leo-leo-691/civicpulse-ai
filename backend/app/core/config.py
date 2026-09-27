@@ -1,5 +1,5 @@
 import os
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CivicPulse AI"
@@ -24,7 +24,6 @@ class Settings(BaseSettings):
     DUPLICATE_SIMILARITY_THRESHOLD: float = float(os.getenv("DUPLICATE_SIMILARITY_THRESHOLD", "0.95"))
     MAX_SUBMISSIONS_PER_HOUR: int = int(os.getenv("MAX_SUBMISSIONS_PER_HOUR", "10"))
     
-    class Config:
-        case_sensitive = True
+    model_config = SettingsConfigDict(case_sensitive=True)
 
 settings = Settings()
