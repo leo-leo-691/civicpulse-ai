@@ -1,6 +1,6 @@
 # CivicPulse AI — Data Model & Schema Reference
 
-Database Engine: PostgreSQL 16 + PostGIS + pgvector
+Database Engine: SQLite (Local) / PostgreSQL 16 (PostGIS-ready, pgvector-ready)
 
 ---
 

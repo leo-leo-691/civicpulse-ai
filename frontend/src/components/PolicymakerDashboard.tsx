@@ -23,12 +23,15 @@ export default function PolicymakerDashboard() {
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
   useEffect(() => {
     // Fetch Overview KPIs
     getAnalyticsOverview()
       .then(data => setOverview(data))
       .catch(() => {
+        setIsDemoMode(true);
         setOverview({
           total_requests: 4821,
           unique_requests: 1204,
@@ -48,6 +51,7 @@ export default function PolicymakerDashboard() {
         if (data.length > 0) setSelectedHotspot(data[0]);
       })
       .catch(() => {
+        setIsDemoMode(true);
         const fallback: Hotspot[] = [
           {
             id: 2,
@@ -112,6 +116,8 @@ export default function PolicymakerDashboard() {
   const handleDecision = async (status: string) => {
     if (!selectedHotspot) return;
     const targetRecId = selectedRecommendation?.id || selectedHotspot.id || 1;
+    setDecisionStatus(null);
+    setDecisionError(null);
     try {
       await recordRecommendationDecision(targetRecId, {
         decision: status,
@@ -119,8 +125,8 @@ export default function PolicymakerDashboard() {
         reviewer: "District Collector / Magistrate"
       });
       setDecisionStatus(status);
-    } catch (e) {
-      setDecisionStatus(status);
+    } catch (e: any) {
+      setDecisionError("Failed to record decision: Server unreachable.");
     }
   };
 
@@ -131,7 +137,7 @@ export default function PolicymakerDashboard() {
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-amber-400">BRICS Public Infrastructure Decision Platform</span>
           <h1 className="text-2xl font-black">CivicPulse AI — Policymaker Intelligence Dashboard</h1>
-          <p className="text-slate-400 text-xs mt-1">Aggregating Citizen Demand • PostGIS Hotspot Analysis • Digital Divide Correction</p>
+          <p className="text-slate-400 text-xs mt-1">Aggregating Citizen Demand • Geospatial lat/long indexing (PostGIS-ready schema) • Digital Divide Correction</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 bg-blue-900/60 border border-blue-500/40 text-blue-300 text-xs font-semibold rounded-full">
@@ -139,6 +145,13 @@ export default function PolicymakerDashboard() {
           </span>
         </div>
       </div>
+
+      {isDemoMode && (
+        <div className="bg-amber-100 border border-amber-300 text-amber-900 p-3 rounded-lg text-sm font-semibold flex items-center gap-2 mb-4">
+          <AlertTriangle className="w-5 h-5 text-amber-600" />
+          ⚠️ Backend unreachable — showing simulated fallback data.
+        </div>
+      )}
 
       {/* KPI Overview Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -247,6 +260,13 @@ export default function PolicymakerDashboard() {
             <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold rounded-lg flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               Decision recorded as [{decisionStatus}] by District Collector. Audit log updated.
+            </div>
+          )}
+
+          {decisionError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-900 text-xs font-bold rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              {decisionError}
             </div>
           )}
         </div>

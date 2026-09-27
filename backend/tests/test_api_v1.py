@@ -29,5 +29,14 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIsInstance(res.json(), list)
 
+    def test_invalid_decision_rejected(self):
+        # Requires id=1 to exist, but if validation happens first, we should get 422 Unprocessable Entity
+        res = self.client.post("/api/v1/recommendations/1/decision", json={
+            "decision": "Not A Valid Decision",
+            "decision_reason": "Testing invalid enum",
+            "reviewer": "Test Bot"
+        })
+        self.assertEqual(res.status_code, 422)
+
 if __name__ == "__main__":
     unittest.main()

@@ -26,6 +26,22 @@ app.add_middleware(
 
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
+from app.core.database import SessionLocal
+from app.ai.clustering import SemanticClusterEngine
+
+@app.on_event("startup")
+def startup_event():
+    # Run DBSCAN batch clustering on startup to ensure demo dashboard shows DBSCAN output
+    db = SessionLocal()
+    try:
+        engine = SemanticClusterEngine()
+        engine.execute_batch_clustering(db)
+        db.commit()
+    except Exception as e:
+        print(f"Startup clustering failed: {e}")
+    finally:
+        db.close()
+
 @app.get("/")
 def root():
     return {

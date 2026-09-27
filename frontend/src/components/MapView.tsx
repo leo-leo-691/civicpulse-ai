@@ -30,7 +30,7 @@ export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: 
         <div>
           <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-400" />
-            GIS Geospatial Hotspot Map — PostGIS Layer
+            GIS Geospatial Hotspot Map — Geospatial lat/long indexing (PostGIS-ready schema)
           </h3>
           <p className="text-xs text-slate-400">
             Maharashtra Administrative Units (Pune &amp; Gadchiroli)

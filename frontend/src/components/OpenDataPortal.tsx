@@ -12,17 +12,33 @@ export default function OpenDataPortal() {
     try {
       const data = await getOpenDataExport();
       
-      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-        JSON.stringify(data, null, 2)
-      )}`;
+      let fileString = "";
+      let mimeType = "application/json";
+
+      if (format === "csv") {
+        mimeType = "text/csv";
+        if (data.length > 0) {
+          const keys = Object.keys(data[0]);
+          const csvContent = [
+            keys.join(","),
+            ...data.map((row: any) => keys.map(k => JSON.stringify(row[k])).join(","))
+          ].join("\\n");
+          fileString = `data:${mimeType};charset=utf-8,${encodeURIComponent(csvContent)}`;
+        } else {
+          fileString = `data:${mimeType};charset=utf-8,`;
+        }
+      } else {
+        fileString = `data:${mimeType};charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
+      }
+
       const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', jsonString);
+      downloadAnchor.setAttribute('href', fileString);
       downloadAnchor.setAttribute('download', `civicpulse_open_data_export.${format}`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
     } catch (err) {
-      alert("Open Data Export downloaded successfully.");
+      alert("Failed to download Open Data Export.");
     } finally {
       setDownloading(false);
     }

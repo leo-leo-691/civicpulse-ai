@@ -20,6 +20,64 @@ CivicPulse AI is a scalable, multilingual AI public infrastructure decision-supp
 
 ---
 
+## 🏛️ System Architecture & Workflow
+
+CivicPulse AI operates on a modern, decoupled architecture connecting citizen-facing ingestion to AI-powered policymaker analytics.
+
+```mermaid
+graph TD
+    %% Citizen Ingestion Layer
+    subgraph Ingestion["Citizen Voice Portal"]
+        Web[Web Text / Voice]
+        App[WhatsApp / SMS]
+    end
+
+    %% Backend AI Pipeline
+    subgraph Pipeline["AI Processing Pipeline (FastAPI)"]
+        Extract[LLM Multilingual Extraction]
+        Embed[Text Embeddings Generation]
+        Dedup[Similarity Search & Deduplication]
+    end
+
+    %% Semantic Engine & Hotspots
+    subgraph Engine["Semantic Cluster Engine"]
+        DBSCAN[DBSCAN Geotagged Clustering]
+        Priority[Priority Scoring Algorithm]
+    end
+    
+    %% Databases
+    subgraph Storage["Database & Infrastructure"]
+        SQL[(SQLite / PostgreSQL)]
+    end
+
+    %% Dashboard
+    subgraph Dashboard["Policymaker Dashboard (Next.js)"]
+        Map[Hotspot GIS Map]
+        Recommend[Grounded Recommendations]
+        Analytics[Real-time KPIs]
+    end
+
+    %% Flow
+    Web --> Extract
+    App --> Extract
+    Extract --> Embed
+    Embed --> Dedup
+    Dedup --> SQL
+    SQL --> DBSCAN
+    DBSCAN --> Priority
+    Priority --> SQL
+    SQL --> Dashboard
+```
+
+### 🔄 Request Workflow
+1. **Submission**: A citizen submits a localized issue (via voice or text in any supported language).
+2. **Extraction & NLP**: The LLM extracts the core issue, severity, and intent, mapping it to standard ontologies.
+3. **Deduplication**: Using text embeddings, the system identifies if this issue has already been reported, increasing the `duplicate_count` to measure severity instead of creating noise.
+4. **Clustering & Priority**: Background processes cluster related geographical requests. The priority engine scores these clusters based on infrastructure gaps, demographics, and a unique Digital Divide Correction formula.
+5. **Action**: Policymakers view clustered hotspots, approve auto-generated evidence-grounded recommendations, and track the impact of the investment.
+
+---
+
 ## 🏗️ Repository Architecture
 
 ```text
@@ -80,6 +138,16 @@ civicpulse-ai/
    npm run dev
    ```
    Open `http://localhost:3000` for Citizen Portal & Policymaker Dashboard.
+
+---
+
+## 🚧 Known Limitations & Roadmap
+
+As an agile hackathon prototype demonstrating core value and AI safety:
+- **Database Backend**: SQLite is currently utilized for local development to ensure an out-of-the-box working demo. The schema is built on SQLAlchemy and is designed for a seamless migration to **PostgreSQL + PostGIS + pgvector** in production.
+- **Rate Limiting**: Rate limiting for anomaly detection is configured and actively enforced in-memory to prevent spam bursts; a production deployment will offload this to Redis.
+- **Recommendation Generation**: For perfect grounding guarantees in this demo, recommendation texts are template-based. LLM connections are built into the pipeline interface, awaiting enablement.
+- **Authentication**: Basic policymaker operations assume a trusted local environment or rely on basic API key verification. Production deployments will require robust OAuth2 / OIDC integration.
 
 ---
 
