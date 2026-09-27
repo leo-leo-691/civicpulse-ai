@@ -17,6 +17,7 @@ class ExtractedCitizenRequest(BaseModel):
     translated_text: Optional[str] = Field(default=None, description="Normalized or translated English text")
     model_confidence: Optional[float] = Field(default=None, description="Defensible model confidence score if provided by model, else None")
     provider_status: str = Field(default="DEVELOPMENT FALLBACK", description="REAL, DEVELOPMENT FALLBACK, or UNAVAILABLE")
+    visual_analysis: Optional[Dict[str, Any]] = Field(default=None, description="Gemini multimodal image assessment")
 
 class GroundedRecommendation(BaseModel):
     cluster_id: int
@@ -35,8 +36,9 @@ class GroundedRecommendation(BaseModel):
 class RequestCreate(BaseModel):
     raw_text: Optional[str] = None
     audio_base64: Optional[str] = None
-    channel: Literal["text", "voice", "whatsapp", "sms", "telegram"] = Field(default="text", description="text, voice, whatsapp, sms, telegram")
-    language: Optional[Literal["en", "hi", "mr", "pt"]] = Field(default="en", description="ISO code: en, hi, mr, pt")
+    image_base64: Optional[str] = None
+    channel: str = Field(default="text", description="text, voice, whatsapp, sms, telegram, web")
+    language: Optional[str] = Field(default="en", description="ISO code: en, hi, mr, pt")
     district: Optional[str] = "Pune"
     locality: Optional[str] = "Shirur Village"
     latitude: Optional[float] = 18.8260
@@ -53,6 +55,8 @@ class CitizenStatusResponse(BaseModel):
     cluster_title: Optional[str] = None
     cluster_unique_requests: int = 1
     cluster_priority_score: Optional[float] = None
+    image_data: Optional[str] = None
+    visual_evidence: Optional[Dict[str, Any]] = None
     created_at: datetime
 
 class DecisionCreate(BaseModel):

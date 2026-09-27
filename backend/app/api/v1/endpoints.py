@@ -17,6 +17,8 @@ from app.schemas.requests import (
 from app.ai.pipeline import process_incoming_request
 from app.services.priority import calculate_priority_score
 from app.ai.clustering import SemanticClusterEngine
+from app.services.public_data import sync_national_datasets
+from app.services.bigquery_service import export_requests_for_bigquery, get_bigquery_ddl, BIGQUERY_CITIZEN_REQUESTS_SCHEMA
 
 router = APIRouter()
 
@@ -33,7 +35,7 @@ def admin_reprocess_clusters(db: Session = Depends(get_db)):
 @router.post("/requests")
 def submit_citizen_request(payload: RequestCreate, db: Session = Depends(get_db)):
     """
-    Ingests citizen request via voice/text/app with AI parsing, deduplication check, and embedding storage.
+    Ingests citizen request via voice/text/photo/app with AI parsing, deduplication check, and embedding storage.
     """
     req, is_dup, orig_req = process_incoming_request(db, payload)
     return {
@@ -44,6 +46,8 @@ def submit_citizen_request(payload: RequestCreate, db: Session = Depends(get_db)
         "category": req.category,
         "subcategory": req.subcategory,
         "severity": req.severity,
+        "visual_evidence": req.visual_evidence_json,
+        "has_image": bool(req.image_data),
         "message": "Your request has been received and processed."
     }
 
@@ -69,6 +73,8 @@ def get_citizen_request_status(ref_code: str, db: Session = Depends(get_db)):
         cluster_title=cluster.title if cluster else f"{req.category} District Initiative",
         cluster_unique_requests=cluster.unique_request_count if cluster else 1,
         cluster_priority_score=cluster.priority_score if cluster else 65.0,
+        image_data=req.image_data,
+        visual_evidence=req.visual_evidence_json,
         created_at=req.created_at
     )
 
@@ -271,3 +277,36 @@ def open_data_export(db: Session = Depends(get_db)):
             longitude=location.longitude if location else (74.3790 if c.district == "Pune" else 75.3433)
         ))
     return export
+
+@router.post("/public-data/sync")
+def sync_national_public_data(db: Session = Depends(get_db)):
+    """
+    Synchronizes district demographics and infrastructure coverage from national open datasets (data.gov.in, PMGSY, JJM).
+    """
+    return sync_national_datasets(db)
+
+@router.get("/bigquery/schema")
+def get_bigquery_schema():
+    """
+    Returns Google Cloud BigQuery Table Schema definition and DDL for national analytics.
+    """
+    return {
+        "dataset": "civicpulse_analytics",
+        "table": "national_citizen_requests",
+        "fields": BIGQUERY_CITIZEN_REQUESTS_SCHEMA,
+        "ddl": get_bigquery_ddl()
+    }
+
+@router.get("/bigquery/export")
+def export_to_bigquery(limit: int = 500, db: Session = Depends(get_db)):
+    """
+    Streams citizen requests formatted for Google Cloud BigQuery batch / streaming ingestion.
+    """
+    rows = export_requests_for_bigquery(db, limit=limit)
+    return {
+        "status": "ready",
+        "row_count": len(rows),
+        "target_table": "civicpulse_analytics.national_citizen_requests",
+        "rows": rows
+    }
+
