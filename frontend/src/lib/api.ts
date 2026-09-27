@@ -112,6 +112,16 @@ export interface CitizenStatus {
   cluster_title?: string | null;
   cluster_unique_requests: number;
   cluster_priority_score?: number | null;
+  image_data?: string | null;
+  visual_evidence?: {
+    verified_category?: string;
+    damage_severity?: string;
+    structural_risk_score?: number;
+    detected_objects?: string[];
+    visual_evidence_summary?: string;
+    is_genuine_infrastructure_issue?: boolean;
+    confidence?: number;
+  } | null;
   created_at: string;
 }
 
@@ -122,6 +132,7 @@ export interface CitizenStatus {
 export interface CitizenRequestPayload {
   raw_text?: string;
   audio_base64?: string;
+  image_base64?: string;
   channel?: 'text' | 'voice' | 'whatsapp' | 'sms' | 'telegram' | string;
   language?: string;
   district?: string;
@@ -142,6 +153,16 @@ export interface CitizenRequestResponse {
   category: string;
   subcategory: string;
   severity: string;
+  has_image?: boolean;
+  visual_evidence?: {
+    verified_category?: string;
+    damage_severity?: string;
+    structural_risk_score?: number;
+    detected_objects?: string[];
+    visual_evidence_summary?: string;
+    is_genuine_infrastructure_issue?: boolean;
+    confidence?: number;
+  } | null;
   message: string;
 }
 
@@ -308,3 +329,30 @@ export async function sendMessagingWebhook(
 export async function getOpenDataExport(): Promise<OpenDataExportItem[]> {
   return apiFetch<OpenDataExportItem[]>('/api/v1/open-data/export');
 }
+
+/**
+ * Trigger synchronization of district benchmarks with national open data (data.gov.in)
+ * Endpoint: POST /api/v1/public-data/sync
+ */
+export async function syncNationalPublicData(): Promise<any> {
+  return apiFetch<any>('/api/v1/public-data/sync', {
+    method: 'POST',
+  });
+}
+
+/**
+ * Fetch Google Cloud BigQuery Analytics Schema & DDL
+ * Endpoint: GET /api/v1/bigquery/schema
+ */
+export async function getBigQuerySchema(): Promise<any> {
+  return apiFetch<any>('/api/v1/bigquery/schema');
+}
+
+/**
+ * Export citizen requests formatted for Google Cloud BigQuery
+ * Endpoint: GET /api/v1/bigquery/export
+ */
+export async function getBigQueryExport(limit: number = 500): Promise<any> {
+  return apiFetch<any>(`/api/v1/bigquery/export?limit=${limit}`);
+}
+

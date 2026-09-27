@@ -101,6 +101,17 @@ def process_incoming_request(
     # 2. AI Structured Extraction
     extracted: ExtractedCitizenRequest = ai_service.llm.extract_structured(raw_text, language=lang)
 
+    # Multimodal Vision Analysis (Gemini 1.5 Flash Vision) if photo provided
+    visual_evidence = None
+    if payload.image_base64:
+        visual_evidence = ai_service.llm.analyze_multimodal_image(payload.image_base64, context_text=raw_text)
+        if visual_evidence:
+            extracted.visual_analysis = visual_evidence
+            if visual_evidence.get("damage_severity") in ["high", "critical"]:
+                extracted.severity = visual_evidence.get("damage_severity")
+            if visual_evidence.get("verified_category") and visual_evidence.get("verified_category") not in ["Other", "General"]:
+                extracted.category = visual_evidence.get("verified_category")
+
     # 3. Generate Embedding & Validate Dimension
     emb = ai_service.embedding.generate_embedding(raw_text)
 
@@ -185,7 +196,9 @@ def process_incoming_request(
         duplicate_count=0,
         confidence_score=None,  # No hardcoded fake confidence numbers
         reporter_hash=payload.reporter_contact_hash or "hash_anon",
-        embedding_json=emb
+        embedding_json=emb,
+        image_data=payload.image_base64,
+        visual_evidence_json=visual_evidence
     )
 
     db.add(new_req)

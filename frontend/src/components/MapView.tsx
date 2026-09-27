@@ -3,7 +3,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { Hotspot } from '@/lib/api';
-import { Layers, MapPin, AlertTriangle } from 'lucide-react';
+import { Globe } from 'lucide-react';
 
 interface MapViewProps {
   hotspots: Hotspot[];
@@ -11,13 +11,12 @@ interface MapViewProps {
   onSelectHotspot: (hotspot: Hotspot) => void;
 }
 
-// Dynamically import the Leaflet map container to disable SSR and prevent window/document errors
-const LeafletMap = dynamic(() => import('./LeafletMapInner'), {
+const GoogleMap = dynamic(() => import('./GoogleMapInner'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[360px] bg-slate-900 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-2 border border-slate-800">
-      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      <span className="text-xs font-medium">Loading OpenStreetMap GIS Tiles...</span>
+    <div className="w-full h-[380px] bg-slate-900 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-2 border border-slate-800">
+      <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      <span className="text-xs font-medium">Loading Google Maps Platform...</span>
     </div>
   ),
 });
@@ -26,17 +25,24 @@ export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: 
   return (
     <div className="relative w-full bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex flex-col p-4 text-white space-y-4">
       {/* Map Header & Legend */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-900/90 backdrop-blur p-3 rounded-lg border border-slate-800">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900/90 backdrop-blur p-3 rounded-lg border border-slate-800">
         <div>
-          <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-blue-400" />
-            GIS Geospatial Hotspot Map — Geospatial lat/long indexing (PostGIS-ready schema)
-          </h3>
-          <p className="text-xs text-slate-400">
-            Maharashtra Administrative Units (Pune &amp; Gadchiroli)
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
+              <Globe className="w-4 h-4 text-emerald-400" />
+              Google Maps Platform — Geospatial Hotspot Engine
+            </h3>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Google Maps
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Interactive Satellite, Terrain, &amp; Roadmap visualization for regional demand hotspots
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
+
+        {/* Legend */}
+        <div className="flex items-center gap-3 text-xs">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/30"></span>
             <span className="text-slate-300">High Priority (&ge;80)</span>
@@ -52,16 +58,16 @@ export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: 
         </div>
       </div>
 
-      {/* Real Interactive Leaflet GIS Map Container */}
-      <div className="w-full h-[360px] rounded-lg overflow-hidden border border-slate-800 bg-slate-950 relative">
-        <LeafletMap
+      {/* Interactive Google Map Viewport */}
+      <div className="w-full h-[380px] rounded-lg overflow-hidden border border-slate-800 bg-slate-950 relative">
+        <GoogleMap
           hotspots={hotspots}
           selectedHotspot={selectedHotspot}
           onSelectHotspot={onSelectHotspot}
         />
       </div>
 
-      {/* Interactive Cluster Selector Cards (Preserved for easy multi-view selection) */}
+      {/* Interactive Cluster Selector Cards */}
       {hotspots && hotspots.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
           {hotspots.map((spot) => {
@@ -98,32 +104,25 @@ export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: 
 
                 <div className="text-xs text-slate-300 space-y-0.5">
                   <p>
-                    📍 {spot.affected_villages} Villages |{' '}
-                    {spot.estimated_population.toLocaleString()} Population
+                    <span className="text-slate-400">Unique Citizen Reports:</span>{' '}
+                    <strong className="text-white">{spot.unique_request_count.toLocaleString()}</strong>
+                    <span className="text-slate-500 ml-1">({spot.total_request_count.toLocaleString()} total mentions)</span>
                   </p>
                   <p>
-                    📊 {spot.total_request_count} Reports ({spot.unique_request_count} Unique after
-                    Dedup)
+                    <span className="text-slate-400">Est. Population Impacted:</span>{' '}
+                    <strong className="text-white">{spot.estimated_population.toLocaleString()} citizens</strong>
                   </p>
+                  {spot.digital_access_correction > 0 && (
+                    <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-600/50 text-emerald-300 text-[11px] font-medium">
+                      <span>✓ Digital Divide Boost: +{spot.digital_access_correction} points</span>
+                    </div>
+                  )}
                 </div>
-
-                {spot.is_under_reported && (
-                  <div className="mt-2.5 text-[11px] font-semibold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2 py-1 rounded flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>Section 7 Digital Divide Boost: +{spot.digital_access_correction} pts</span>
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
       )}
-
-      {/* Map Status Footer */}
-      <div className="text-[10px] text-slate-400 flex justify-between items-center px-1">
-        <span>Click markers or cards to focus cluster in Evidence Panel</span>
-        <span>Coordinates EPSG:4326 WGS84 | Leaflet &amp; OpenStreetMap</span>
-      </div>
     </div>
   );
 }

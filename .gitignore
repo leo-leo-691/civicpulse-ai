@@ -18,6 +18,7 @@ out/
 frontend/out/
 build/
 dist/
+*.tsbuildinfo
 
 # Environment variables
 .env
