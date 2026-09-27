@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import CitizenPortal from '@/components/CitizenPortal';
 import PolicymakerDashboard from '@/components/PolicymakerDashboard';
 import { Shield, Users, LayoutDashboard, Globe2, AlertTriangle, Database } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const [view, setView] = useState<'citizen' | 'policymaker'>('policymaker');
