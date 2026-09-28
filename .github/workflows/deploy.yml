@@ -41,7 +41,7 @@ jobs:
             --region asia-south1 \
             --allow-unauthenticated \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,SECRET_KEY=civicpulse-secret-key:latest" \
-            --set-env-vars="USE_SQLITE=true,GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},POLICYMAKER_EMAILS=${{ secrets.POLICYMAKER_EMAILS }},ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" \
+            --set-env-vars="^|^USE_SQLITE=true|GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|POLICYMAKER_EMAILS=${{ secrets.POLICYMAKER_EMAILS }}|ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" \
             --memory 1Gi \
             --port 8080 \
             --format="value(status.url)")
@@ -95,6 +95,6 @@ jobs:
             --region asia-south1 \
             --allow-unauthenticated \
             --set-secrets="GOOGLE_CLIENT_SECRET=google-client-secret:latest,NEXTAUTH_SECRET=nextauth-secret:latest" \
-            --set-env-vars="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }},POLICYMAKER_EMAILS=${{ secrets.POLICYMAKER_EMAILS }},ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" \
+            --set-env-vars="^|^GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}|POLICYMAKER_EMAILS=${{ secrets.POLICYMAKER_EMAILS }}|ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" \
             --memory 512Mi \
             --port 3000
