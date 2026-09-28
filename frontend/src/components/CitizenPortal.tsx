@@ -13,7 +13,8 @@ import {
 import { useSession, signIn, signOut } from 'next-auth/react';
 
 export default function CitizenPortal() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
   const [activeTab, setActiveTab] = useState<'submit' | 'status' | 'messaging'>('submit');
   const [language, setLanguage] = useState('en');
   const [channel, setChannel] = useState('text');
@@ -35,6 +36,20 @@ export default function CitizenPortal() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  React.useEffect(() => {
+    if (status === 'unauthenticated') {
+      const hasSeenPopup = localStorage.getItem('hasSeenAuthPopup');
+      if (!hasSeenPopup) {
+        setShowAuthPopup(true);
+      }
+    }
+  }, [status]);
+
+  const handleDismissPopup = () => {
+    localStorage.setItem('hasSeenAuthPopup', 'true');
+    setShowAuthPopup(false);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -230,7 +245,36 @@ export default function CitizenPortal() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-[#0c1222]/90 rounded-2xl shadow-2xl border border-slate-800 text-slate-100 backdrop-blur-md">
+    <div className="max-w-4xl mx-auto p-6 bg-[#0c1222]/90 rounded-2xl shadow-2xl border border-slate-800 text-slate-100 backdrop-blur-md relative">
+      {/* Auth Popup Modal */}
+      {showAuthPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-center mb-4">
+              <ShieldCheck className="w-12 h-12 text-cyan-400" />
+            </div>
+            <h2 className="text-xl font-bold text-center text-white mb-2">Welcome to Citizen Voice</h2>
+            <p className="text-sm text-slate-300 text-center mb-6">
+              Sign in to track your infrastructure requests across devices, or continue as a guest to submit anonymously.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => signIn()}
+                className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-xl transition shadow-lg"
+              >
+                Sign In / Create Account
+              </button>
+              <button
+                onClick={handleDismissPopup}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm rounded-xl border border-slate-700 transition"
+              >
+                Continue without sign in
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="border-b border-slate-800/80 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
