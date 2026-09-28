@@ -11,14 +11,18 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "Demo Account",
       credentials: {
-        role: { label: "Type 'admin' or 'policymaker'", type: "text", placeholder: "admin" }
+        email: { label: "Email", type: "email", placeholder: "admin@demo.com" },
+        password: { label: "Password", type: "password", placeholder: "admin123" }
       },
       async authorize(credentials) {
-        if (credentials?.role === "admin") {
+        if (credentials?.email === "admin@demo.com" && credentials?.password === "admin123") {
           return { id: "1", name: "Demo Admin", email: "admin@demo.com", role: "admin" }
         }
-        if (credentials?.role === "policymaker") {
+        if (credentials?.email === "policymaker@demo.com" && credentials?.password === "policy123") {
           return { id: "2", name: "Demo Policymaker", email: "policymaker@demo.com", role: "policymaker" }
+        }
+        if (credentials?.email === "citizen@demo.com" && credentials?.password === "citizen123") {
+          return { id: "3", name: "Demo Citizen", email: "citizen@demo.com", role: "citizen" }
         }
         return null;
       }
@@ -39,7 +43,7 @@ const handler = NextAuth({
         const policymakerEmails = (process.env.POLICYMAKER_EMAILS || "").split(",").map(e => e.trim())
         const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim())
         const email = token.email || ""
-        let role = "none"
+        let role = "citizen" // Default fallback for all optional Google users
         if (adminEmails.includes(email)) role = "admin"
         else if (policymakerEmails.includes(email)) role = "policymaker"
         token.role = role

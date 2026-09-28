@@ -13,6 +13,8 @@ def get_current_user_role(credentials: HTTPAuthorizationCredentials = Security(s
         return "admin"
     if token == "DEMO_TOKEN_POLICYMAKER":
         return "policymaker"
+    if token == "DEMO_TOKEN_CITIZEN":
+        return "citizen"
 
     client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
     
@@ -33,7 +35,7 @@ def get_current_user_role(credentials: HTTPAuthorizationCredentials = Security(s
     elif email in policymaker_emails:
         return "policymaker"
     else:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        return "citizen" # Allow any valid Google user as citizen
 
 def require_policymaker(role: str = Depends(get_current_user_role)):
     if role not in ["policymaker", "admin"]:
