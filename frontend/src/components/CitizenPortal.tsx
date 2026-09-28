@@ -10,8 +10,10 @@ import {
   CitizenStatus,
   MessagingWebhookResponse,
 } from '@/lib/api';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 export default function CitizenPortal() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'submit' | 'status' | 'messaging'>('submit');
   const [language, setLanguage] = useState('en');
   const [channel, setChannel] = useState('text');
@@ -240,9 +242,26 @@ export default function CitizenPortal() {
           </div>
           <p className="text-slate-400 text-xs mt-1">Direct community signal ingestion via voice audio, photo analysis, text, and WhatsApp.</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30 shrink-0">
-          <ShieldCheck className="w-4 h-4" /> Digital Public Good
-        </span>
+        <div className="flex items-center gap-4">
+          {session ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-semibold text-white">{session.user?.name || "Citizen"}</p>
+                <p className="text-[10px] text-cyan-400 capitalize">{session.user?.role || "Citizen"}</p>
+              </div>
+              <button onClick={() => signOut()} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded text-white border border-slate-700 transition">
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => signIn()} className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-xs font-bold rounded text-white shadow-lg transition">
+              Optional Sign In
+            </button>
+          )}
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30 shrink-0">
+            <ShieldCheck className="w-4 h-4" /> Digital Public Good
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
