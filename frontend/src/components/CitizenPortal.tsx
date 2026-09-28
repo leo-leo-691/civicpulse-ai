@@ -291,7 +291,7 @@ export default function CitizenPortal() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="text-sm font-semibold text-white">{session.user?.name || "Citizen"}</p>
-                <p className="text-[10px] text-cyan-400 capitalize">{session.user?.role || "Citizen"}</p>
+                <p className="text-[10px] text-cyan-400 capitalize">{(session.user as any)?.role || "Citizen"}</p>
               </div>
               <button onClick={() => signOut()} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded text-white border border-slate-700 transition">
                 Sign Out
