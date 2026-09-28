@@ -3,10 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, Users, Activity, Sparkles } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Users, Activity, Sparkles, LogOut } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const navLinks = [
     { href: '/', label: 'Mission Story', icon: Sparkles },
@@ -63,6 +65,15 @@ export default function Navigation() {
             <span className="hidden sm:inline">Digital Public Good</span>
             <span className="sm:hidden">DPG</span>
           </span>
+          {session && (
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded border border-slate-700 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          )}
         </div>
       </div>
 
