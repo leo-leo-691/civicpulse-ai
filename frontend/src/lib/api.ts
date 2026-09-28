@@ -216,8 +216,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   let token = null;
   if (typeof window !== 'undefined') {
     const session = await getSession();
-    if (session?.id_token) {
-      token = session.id_token;
+    if ((session as any)?.id_token) {
+      token = (session as any).id_token;
     }
   }
 
