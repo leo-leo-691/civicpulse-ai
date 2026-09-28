@@ -95,6 +95,6 @@ jobs:
             --region asia-south1 \
             --allow-unauthenticated \
             --set-secrets="GOOGLE_CLIENT_SECRET=google-client-secret:latest,NEXTAUTH_SECRET=nextauth-secret:latest" \
-            --set-env-vars="^|^GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}|POLICYMAKER_EMAILS=${{ secrets.POLICYMAKER_EMAILS }}|ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" \
+            --set-env-vars="^|^GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|NEXTAUTH_URL=https://civicpulse-frontend-426042943892.asia-south1.run.app|POLICYMAKER_EMAILS=${{ secrets.POLICYMAKER_EMAILS }}|ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" \
             --memory 512Mi \
             --port 3000
