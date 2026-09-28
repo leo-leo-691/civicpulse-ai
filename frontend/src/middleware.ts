@@ -7,11 +7,17 @@ export default withAuth(
     const path = req.nextUrl.pathname
     
     if (path.startsWith("/admin") && role !== "admin") {
-      return NextResponse.redirect(new URL("/login?error=AccessDenied", req.url))
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("error", "AccessDenied");
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
     }
     
     if (path.startsWith("/dashboard") && !["policymaker", "admin"].includes(role as string)) {
-      return NextResponse.redirect(new URL("/login?error=AccessDenied", req.url))
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("error", "AccessDenied");
+      loginUrl.searchParams.set("callbackUrl", path);
+      return NextResponse.redirect(loginUrl);
     }
     
     return NextResponse.next()
