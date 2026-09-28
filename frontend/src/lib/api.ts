@@ -208,10 +208,22 @@ export interface OpenDataExportItem {
 // Core Fetch Request Helper with Error Handling
 // ============================================================================
 
+import { getSession } from 'next-auth/react';
+
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  
+  let token = null;
+  if (typeof window !== 'undefined') {
+    const session = await getSession();
+    if (session?.id_token) {
+      token = session.id_token;
+    }
+  }
+
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options?.headers || {}),
   };
 

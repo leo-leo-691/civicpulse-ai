@@ -27,9 +27,11 @@ services:
     container_name: civicpulse_backend
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/civicpulse_db
-
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - PYTHONPATH=/app
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - POLICYMAKER_EMAILS=${POLICYMAKER_EMAILS:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
     ports:
       - "8000:8000"
     depends_on:
@@ -50,6 +52,12 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - POLICYMAKER_EMAILS=${POLICYMAKER_EMAILS:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
     depends_on:
       - backend
 

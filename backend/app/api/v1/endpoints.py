@@ -21,6 +21,7 @@ from app.services.priority import calculate_priority_score
 from app.ai.clustering import SemanticClusterEngine
 from app.services.public_data import sync_national_datasets
 from app.services.bigquery_service import export_requests_for_bigquery, get_bigquery_ddl, BIGQUERY_CITIZEN_REQUESTS_SCHEMA
+from app.api.auth import require_policymaker, require_admin
 
 router = APIRouter()
 
@@ -35,7 +36,7 @@ def admin_reprocess_clusters(db: Session = Depends(get_db)):
     return {"status": "success", "result": result}
 
 @router.get("/admin/provider-status")
-def admin_get_provider_status():
+def admin_get_provider_status(role: str = Depends(require_admin)):
     """
     Returns AI Provider Operational Status (Real vs Development Fallback) for LLM, Embedding, Speech, and Vision.
     """
@@ -218,7 +219,7 @@ def get_recommendations(db: Session = Depends(get_db)):
     return out
 
 @router.post("/recommendations/{rec_id}/decision")
-def record_policymaker_decision(rec_id: int, payload: DecisionCreate, db: Session = Depends(get_db)):
+def record_policymaker_decision(rec_id: int, payload: DecisionCreate, db: Session = Depends(get_db), role: str = Depends(require_policymaker)):
     """
     Section 29: Human-in-the-loop decision logging.
     """
