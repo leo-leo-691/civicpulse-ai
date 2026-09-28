@@ -39,15 +39,11 @@ export default function CitizenPortal() {
 
   React.useEffect(() => {
     if (status === 'unauthenticated') {
-      const hasSeenPopup = localStorage.getItem('hasSeenAuthPopup');
-      if (!hasSeenPopup) {
-        setShowAuthPopup(true);
-      }
+      setShowAuthPopup(true);
     }
   }, [status]);
 
   const handleDismissPopup = () => {
-    localStorage.setItem('hasSeenAuthPopup', 'true');
     setShowAuthPopup(false);
   };
 

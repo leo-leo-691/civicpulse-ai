@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_URL=https://civicpulse-backend-426042943892.asia-south1.run.app'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY='
+      - '-t'
+      - 'asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/frontend'
+      - '.'
+images:
+  - 'asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/frontend'

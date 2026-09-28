@@ -11,8 +11,8 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "Demo Account",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "admin@demo.com" },
-        password: { label: "Password", type: "password", placeholder: "admin123" }
+        email: { label: "Demo Email", type: "email", placeholder: "policymaker@demo.com / admin@demo.com" },
+        password: { label: "Demo Password", type: "password", placeholder: "policy123 / admin123" }
       },
       async authorize(credentials) {
         if (credentials?.email === "admin@demo.com" && credentials?.password === "admin123") {

@@ -38,7 +38,7 @@ def get_current_user_role(credentials: HTTPAuthorizationCredentials = Security(s
         return "citizen" # Allow any valid Google user as citizen
 
 def require_policymaker(role: str = Depends(get_current_user_role)):
-    if role != "policymaker":
+    if role not in ["policymaker", "admin"]:
         raise HTTPException(status_code=403, detail="Requires policymaker role")
     return role
 
