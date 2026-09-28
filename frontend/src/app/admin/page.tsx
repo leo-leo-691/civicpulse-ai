@@ -54,10 +54,10 @@ export default function AdminConsolePage() {
         setProviderStatus({
           status: 'degraded',
           providers: {
-            llm: { provider: 'Google Gemini', model: 'gemini-2.5-flash', status: 'REAL', task: 'Multilingual complaint triage & summarization' },
+            llm: { provider: 'Google Gemini', model: 'gemini-3.8-flash', status: 'REAL', task: 'Multilingual complaint triage & summarization' },
             embedding: { provider: 'Google Gemini', model: 'text-embedding-004', status: 'REAL', task: 'Semantic deduplication & clustering' },
             speech: { provider: 'Google Cloud Speech / Whisper', model: 'whisper-large-v3', status: 'DEVELOPMENT FALLBACK', task: 'Vernacular audio transcription' },
-            vision: { provider: 'Google Gemini', model: 'gemini-2.5-flash', status: 'REAL', task: 'Civic damage verification & fraud filtering' }
+            vision: { provider: 'Google Gemini', model: 'gemini-3.8-flash', status: 'REAL', task: 'Civic damage verification & fraud filtering' }
           },
           environment: {
             gemini_api_key_configured: true,

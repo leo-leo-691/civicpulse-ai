@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "civicpulse-secret-key-change-in-production-brics-2026")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/civicpulse_db")

@@ -36,9 +36,8 @@ class GeminiLLMProvider(BaseLLMProvider):
         self.last_vision_status = "DEVELOPMENT FALLBACK"
         if api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                self._client = genai.GenerativeModel("gemini-1.5-flash")
+                from google import genai
+                self._client = genai.Client(api_key=api_key)
                 self.last_provider_status = "REAL"
                 self.last_vision_status = "REAL"
             except Exception:
@@ -64,7 +63,10 @@ class GeminiLLMProvider(BaseLLMProvider):
             Citizen Input: "{text}"
             """
             try:
-                response = self._client.generate_content(prompt)
+                response = self._client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=prompt
+                )
                 clean_json = response.text.replace("```json", "").replace("```", "").strip()
                 data = json.loads(clean_json)
                 req = ExtractedCitizenRequest(**data)
@@ -145,10 +147,14 @@ class GeminiLLMProvider(BaseLLMProvider):
                     "confidence": 0.94
                 }}
                 """
-                response = self._client.generate_content([
-                    prompt,
-                    {"mime_type": mime_type, "data": image_bytes}
-                ])
+                from google.genai import types
+                response = self._client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=[
+                        prompt,
+                        types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+                    ]
+                )
                 clean_json = response.text.replace("```json", "").replace("```", "").strip()
                 result = json.loads(clean_json)
                 result["provider_status"] = "REAL"
@@ -196,13 +202,12 @@ class GeminiEmbeddingProvider(BaseEmbeddingProvider):
     def __init__(self, api_key: str, expected_dim: int = 768):
         self.api_key = api_key
         self.expected_dim = expected_dim
-        self._genai = None
+        self._client = None
         self.last_provider_status = "DEVELOPMENT FALLBACK"
         if api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                self._genai = genai
+                from google import genai
+                self._client = genai.Client(api_key=api_key)
             except Exception:
                 pass
 
@@ -214,14 +219,13 @@ class GeminiEmbeddingProvider(BaseEmbeddingProvider):
 
     def generate_embedding(self, text: str) -> List[float]:
         text_content = text or ""
-        if self._genai:
+        if self._client:
             try:
-                res = self._genai.embed_content(
-                    model="models/text-embedding-004",
-                    content=text_content,
-                    task_type="retrieval_document"
+                res = self._client.models.embed_content(
+                    model="text-embedding-004",
+                    contents=text_content
                 )
-                emb = res['embedding']
+                emb = res.embeddings[0].values
                 self.last_provider_status = "REAL"
                 self.expected_dim = len(emb)
                 return self.validate_dimension(emb)
@@ -303,7 +307,7 @@ class AIServiceContainer:
             "providers": {
                 "llm": {
                     "provider": "Google Gemini",
-                    "model": "gemini-1.5-flash",
+                    "model": "gemini-3.8-flash",
                     "status": llm_status,
                     "task": "Structured Citizen Request Categorization & Translation"
                 },
@@ -321,7 +325,7 @@ class AIServiceContainer:
                 },
                 "vision": {
                     "provider": "Google Gemini Vision",
-                    "model": "gemini-1.5-flash",
+                    "model": "gemini-3.8-flash",
                     "status": vision_status,
                     "task": "Multimodal Infrastructure Damage Verification"
                 }

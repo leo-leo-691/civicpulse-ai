@@ -1,0 +1,19 @@
+.gcloudignore
+.git
+.gitignore
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Databases
+*.db
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# User-specific
+scratch/

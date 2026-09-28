@@ -3,7 +3,7 @@ import sys
 import datetime
 
 # Add backend directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import SessionLocal, engine, Base
 from app.models.domain import (

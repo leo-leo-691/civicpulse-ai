@@ -1,0 +1,92 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    outputs:
+      backend_url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Backend
+        id: deploy
+        run: |
+          cd backend
+          gcloud builds submit --tag asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/backend
+          BACKEND_URL=$(gcloud run deploy civicpulse-backend \
+            --image asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/backend \
+            --platform managed \
+            --region asia-south1 \
+            --allow-unauthenticated \
+            --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,SECRET_KEY=civicpulse-secret-key:latest" \
+            --set-env-vars="USE_SQLITE=true" \
+            --memory 1Gi \
+            --port 8080 \
+            --format="value(status.url)")
+          echo "url=$BACKEND_URL" >> "$GITHUB_OUTPUT"
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Frontend
+        run: |
+          cd frontend
+          cat > cloudbuild.yaml <<EOF
+          steps:
+            - name: 'gcr.io/cloud-builders/docker'
+              args:
+                - 'build'
+                - '--build-arg'
+                - 'NEXT_PUBLIC_API_URL=${{ needs.deploy-backend.outputs.backend_url }}'
+                - '--build-arg'
+                - 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}'
+                - '-t'
+                - 'asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/frontend'
+                - '.'
+          images:
+            - 'asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/frontend'
+          EOF
+          sed -i 's/^          //' cloudbuild.yaml
+          gcloud builds submit --config cloudbuild.yaml .
+          gcloud run deploy civicpulse-frontend \
+            --image asia-south1-docker.pkg.dev/geminijournal-507414/civicpulse-repo/frontend \
+            --platform managed \
+            --region asia-south1 \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --port 3000

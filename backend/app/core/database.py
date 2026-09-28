@@ -5,8 +5,12 @@ from app.core.config import settings
 
 db_url = settings.DATABASE_URL
 
-# Fallback to SQLite in-memory or local sqlite for seamless local testing if postgres not available
-if "sqlite" in db_url or os.getenv("USE_SQLITE", "False").lower() == "true":
+if os.getenv("USE_SQLITE", "False").lower() == "true":
+    db_url = os.getenv("DATABASE_URL", "sqlite:///./civicpulse_dev.db")
+    if not db_url.startswith("sqlite"):
+        db_url = "sqlite:///./civicpulse_dev.db"
+
+if "sqlite" in db_url:
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
 else:
     try:

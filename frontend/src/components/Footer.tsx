@@ -32,7 +32,7 @@ export default function Footer() {
               Operations Control
             </Link>
             <a
-              href="http://localhost:8000/docs"
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/docs`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-slate-400 hover:text-white transition"

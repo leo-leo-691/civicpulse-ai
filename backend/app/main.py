@@ -28,11 +28,21 @@ app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
 from app.core.database import SessionLocal
 from app.ai.clustering import SemanticClusterEngine
+from app.models.domain import CitizenRequest
 
 @app.on_event("startup")
 def startup_event():
     # Run DBSCAN batch clustering on startup to ensure demo dashboard shows DBSCAN output
     db = SessionLocal()
+    # Idempotent auto-seed
+    try:
+        if db.query(CitizenRequest).count() == 0:
+            print("Database empty. Running auto-seed...")
+            from scripts.seed_demo_data import seed_database
+            seed_database()
+    except Exception as seed_err:
+        print(f"Auto-seed failed: {seed_err}")
+
     try:
         engine = SemanticClusterEngine()
         engine.execute_batch_clustering(db)

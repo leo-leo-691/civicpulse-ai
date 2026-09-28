@@ -18,11 +18,7 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: civicpulse_redis
-    ports:
-      - "6379:6379"
+
 
   backend:
     build:
@@ -31,7 +27,7 @@ services:
     container_name: civicpulse_backend
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/civicpulse_db
-      - REDIS_URL=redis://redis:6379/0
+
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - PYTHONPATH=/app
     ports:
@@ -39,8 +35,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_started
+
 
   frontend:
     build:
