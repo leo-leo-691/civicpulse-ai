@@ -10,7 +10,7 @@ export default withAuth(
       return NextResponse.redirect(new URL("/api/auth/signin?error=AccessDenied", req.url))
     }
     
-    if (path.startsWith("/dashboard") && !["policymaker", "admin"].includes(role as string)) {
+    if (path.startsWith("/dashboard") && role !== "policymaker") {
       return NextResponse.redirect(new URL("/api/auth/signin?error=AccessDenied", req.url))
     }
     
