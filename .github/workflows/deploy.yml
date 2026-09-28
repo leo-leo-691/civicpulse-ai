@@ -24,6 +24,9 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
+      - name: Set Google Cloud project
+        run: gcloud config set project geminijournal-507414
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
@@ -59,6 +62,9 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set Google Cloud project
+        run: gcloud config set project geminijournal-507414
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
