@@ -48,9 +48,10 @@ export default function StoryScene() {
     });
 
     lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => {
+    const updateLenis = (time: number) => {
       lenis.raf(time * 1000);
-    });
+    };
+    gsap.ticker.add(updateLenis);
     gsap.ticker.lagSmoothing(0);
 
     // 2. Set up Three.js Scene, Camera, Renderer
@@ -139,7 +140,9 @@ export default function StoryScene() {
       blending: THREE.AdditiveBlending
     });
     const particles = new THREE.Points(particleGeo, particleMat);
-    scene.add(particles);
+    const particleGroup = new THREE.Group();
+    particleGroup.add(particles);
+    scene.add(particleGroup);
 
     // BEAT 2: Speech Bubble / Semantic Morphing Nodes
     const centralSphereGeo = new THREE.IcosahedronGeometry(1.5, 3);
@@ -279,7 +282,7 @@ export default function StoryScene() {
     storyTimeline
       .to(camera.position, { z: 12, y: 0.5, ease: 'power1.inOut' }, 0)
       .to(centralSphereMat, { opacity: 0.9, ease: 'power2.inOut' }, 0.15)
-      .to(particles.rotation, { y: Math.PI * 0.8, x: 0.4 }, 0)
+      .to(particleGroup.rotation, { y: Math.PI * 0.8, x: 0.4 }, 0)
 
       // Beat 2 -> Beat 3 Transition (0.25 to 0.50)
       .call(() => { shardGroup.visible = true; }, [], 0.22)
@@ -353,11 +356,19 @@ export default function StoryScene() {
 
       // Kill Lenis & ScrollTrigger
       lenis.destroy();
+      storyTimeline.kill();
       ScrollTrigger.getAll().forEach((st) => st.kill());
+      gsap.ticker.remove(updateLenis);
+      gsap.ticker.lagSmoothing(500, 33);
 
       // Dispose Geometries & Materials
       scene.traverse((obj) => {
-        if (obj instanceof THREE.Mesh || obj instanceof THREE.Points) {
+        if (
+          obj instanceof THREE.Mesh ||
+          obj instanceof THREE.Points ||
+          obj instanceof THREE.LineSegments ||
+          obj instanceof THREE.Line
+        ) {
           if (obj.geometry) obj.geometry.dispose();
           if (Array.isArray(obj.material)) {
             obj.material.forEach((m) => m.dispose());
