@@ -24,8 +24,7 @@ import {
   getAdminDecisionsAudit,
   AdminProviderStatusResponse,
   AdminAbuseFlag,
-  AdminDecisionAuditItem,
-  ReprocessClustersResponse
+  AdminDecisionAuditItem
 } from '@/lib/api';
 
 export default function AdminConsolePage() {
@@ -34,7 +33,6 @@ export default function AdminConsolePage() {
   const [abuseFlags, setAbuseFlags] = useState<AdminAbuseFlag[]>([]);
   const [decisionAudit, setDecisionAudit] = useState<AdminDecisionAuditItem[]>([]);
   const [reclusterLoading, setReclusterLoading] = useState(false);
-  const [reclusterResult, setReclusterResult] = useState<ReprocessClustersResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchAllAdminData = async () => {
@@ -124,21 +122,11 @@ export default function AdminConsolePage() {
 
   const handleTriggerRecluster = async () => {
     setReclusterLoading(true);
-    setReclusterResult(null);
     try {
-      const res = await adminReprocessClusters();
-      setReclusterResult(res);
+      await adminReprocessClusters();
       await fetchAllAdminData();
     } catch (e: any) {
-      setReclusterResult({
-        status: 'completed',
-        result: {
-          total_clusters: 14,
-          reclassified_records: 1204,
-          noise_points_isolated: 42,
-          algorithm: 'DBSCAN (eps=0.035, metric=haversine) + cosine semantic distance'
-        }
-      });
+      console.warn('Re-clustering trigger fallback:', e);
     } finally {
       setReclusterLoading(false);
     }
@@ -218,11 +206,10 @@ export default function AdminConsolePage() {
                       {key} Modality
                     </span>
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                        isReal
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${isReal
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
                           : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                      }`}
+                        }`}
                     >
                       {info.status}
                     </span>
@@ -285,11 +272,10 @@ export default function AdminConsolePage() {
                       {flag.flag_reason}
                     </td>
                     <td className="py-3 px-3 font-mono">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                        flag.anomaly_score >= 0.9
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${flag.anomaly_score >= 0.9
                           ? 'bg-red-500/10 text-red-400 border border-red-500/30'
                           : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                      }`}>
+                        }`}>
                         {(flag.anomaly_score * 100).toFixed(0)}%
                       </span>
                     </td>
@@ -323,17 +309,6 @@ export default function AdminConsolePage() {
               <div className="text-cyan-400">DPI Standard: Digital Divide Correction enabled</div>
             </div>
 
-            {reclusterResult && (
-              <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                  Clustering Execution Succeeded
-                </div>
-                <pre className="text-[10px] font-mono bg-slate-950/80 p-2 rounded text-slate-300 overflow-x-auto">
-                  {JSON.stringify(reclusterResult.result, null, 2)}
-                </pre>
-              </div>
-            )}
           </div>
 
           <div className="pt-4">
@@ -388,13 +363,12 @@ export default function AdminConsolePage() {
                     Cluster #{item.recommendation_id}
                   </td>
                   <td className="py-3 px-3">
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-block font-mono ${
-                      item.decision === 'Approved'
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-block font-mono ${item.decision === 'Approved'
                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                         : item.decision === 'Needs Analysis'
-                        ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                        : 'bg-slate-800 text-slate-300 border border-slate-700'
-                    }`}>
+                          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}>
                       {item.decision}
                     </span>
                   </td>
