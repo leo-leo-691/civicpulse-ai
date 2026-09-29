@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import React, { useState, Suspense } from 'react';
 import { ShieldCheck } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/citizen';
