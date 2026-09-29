@@ -24,6 +24,6 @@ class Settings(BaseSettings):
     DUPLICATE_SIMILARITY_THRESHOLD: float = float(os.getenv("DUPLICATE_SIMILARITY_THRESHOLD", "0.95"))
     MAX_SUBMISSIONS_PER_HOUR: int = int(os.getenv("MAX_SUBMISSIONS_PER_HOUR", "10"))
     
-    model_config = SettingsConfigDict(case_sensitive=True)
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=(".env", "../.env"), extra="ignore")
 
 settings = Settings()
