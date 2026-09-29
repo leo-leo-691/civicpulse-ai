@@ -30,10 +30,23 @@ export interface Translations {
   // Form Fields
   langLabel: string;
   districtLabel: string;
+  districtPlaceholder: string;
   puneOption: string;
   gadchiroliOption: string;
   localityLabel: string;
   localityPlaceholder: string;
+
+  // Map Location Picker
+  selectOnMap: string;
+  locationPinned: string;
+  removeLocationPin: string;
+  editLocationPin: string;
+  mapModalTitle: string;
+  mapInstructions: string;
+  locateMe: string;
+  confirmLocation: string;
+  cancelMap: string;
+  selectedCoordinates: string;
   descLabel: string;
   recordAudio: string;
   stopRecording: string;
@@ -134,10 +147,22 @@ export const TRANSLATIONS: Record<LanguageCode, Translations> = {
 
     langLabel: "Language",
     districtLabel: "District",
+    districtPlaceholder: "Enter district name (e.g. Pune, Gadchiroli, Nashik)",
     puneOption: "Pune (High Connectivity)",
     gadchiroliOption: "Gadchiroli (Low Mobile Access - Under-Reported)",
     localityLabel: "Locality / Village",
-    localityPlaceholder: "Village or Town Name",
+    localityPlaceholder: "Enter village or town name (e.g. Shirur, Baramati)",
+
+    selectOnMap: "📍 Pick Location on Map (Optional)",
+    locationPinned: "Location Pinned on Map",
+    removeLocationPin: "Remove Pin",
+    editLocationPin: "Change Pin",
+    mapModalTitle: "Pin Issue Location on Map",
+    mapInstructions: "Click anywhere on the map or drag the pin to mark the exact spot of the infrastructure issue.",
+    locateMe: "Use My Current GPS",
+    confirmLocation: "Apply This Location",
+    cancelMap: "Cancel",
+    selectedCoordinates: "Selected Coordinates",
     descLabel: "Citizen Description (Voice or Text)",
     recordAudio: "Record Audio (Microphone)",
     stopRecording: "Stop Recording (Listening...)",
@@ -233,10 +258,22 @@ export const TRANSLATIONS: Record<LanguageCode, Translations> = {
 
     langLabel: "भाषा",
     districtLabel: "ज़िला",
+    districtPlaceholder: "ज़िले का नाम दर्ज करें (उदा. पुणे, गढ़चिरौली, नासिक)",
     puneOption: "पुणे (उच्च कनेक्टिविटी)",
     gadchiroliOption: "गडचिरोली (कम मोबाइल पहुंच - कम दर्ज क्षेत्र)",
     localityLabel: "इलाका / गांव",
-    localityPlaceholder: "गांव या कस्बे का नाम",
+    localityPlaceholder: "गांव या कस्बे का नाम दर्ज करें (उदा. शिरूर)",
+
+    selectOnMap: "📍 नक्शे पर स्थान चुनें (वैकल्पिक)",
+    locationPinned: "नक्शे पर स्थान चिह्नित किया गया",
+    removeLocationPin: "पिन हटाएं",
+    editLocationPin: "स्थान बदलें",
+    mapModalTitle: "नक्शे पर समस्या का स्थान चुनें",
+    mapInstructions: "सटीक स्थान चिह्नित करने के लिए नक्शे पर कहीं भी क्लिक करें या पिन को खींचें।",
+    locateMe: "मेरा वर्तमान जीपीएस स्थान लें",
+    confirmLocation: "यह स्थान लागू करें",
+    cancelMap: "रद्द करें",
+    selectedCoordinates: "चयनित निर्देशांक",
     descLabel: "समस्या का विवरण (आवाज़ या टेक्स्ट)",
     recordAudio: "ऑडियो रिकॉर्ड करें (माइक)",
     stopRecording: "रिकॉर्डिंग रोकें (सुन रहा है...)",
@@ -332,10 +369,22 @@ export const TRANSLATIONS: Record<LanguageCode, Translations> = {
 
     langLabel: "भाषा",
     districtLabel: "जिल्हा",
+    districtPlaceholder: "जिल्ह्याचे नाव प्रविष्ट करा (उदा. पुणे, गडचिरोली, नाशिक)",
     puneOption: "पुणे (उच्च कनेक्टिव्हिटी)",
     gadchiroliOption: "गडचिरोली (कमी मोबाइल उपलब्धता - उपेक्षित क्षेत्र)",
     localityLabel: "परिसर / गाव",
-    localityPlaceholder: "गाव किंवा शहराचे नाव",
+    localityPlaceholder: "गाव किंवा शहराचे नाव प्रविष्ट करा (उदा. शिरूर)",
+
+    selectOnMap: "📍 नकाशावर जागा निवडा (पर्यायी)",
+    locationPinned: "नकाशावर स्थान निश्चित केले",
+    removeLocationPin: "पिन हटवा",
+    editLocationPin: "स्थान बदला",
+    mapModalTitle: "नकाशावर समस्येचे अचूक स्थान निश्चित करा",
+    mapInstructions: "समस्येचे अचूक ठिकाण दर्शवण्यासाठी नकाशावर कुठेही क्लिक करा किंवा पिन हलवा.",
+    locateMe: "माझे सध्याचे जीपीएस स्थान वापरा",
+    confirmLocation: "हे स्थान वापरा",
+    cancelMap: "रद्द करा",
+    selectedCoordinates: "निवडलेले अक्षांश-रेखांश",
     descLabel: "समस्येचे वर्णन (आवाज किंवा मजकूर)",
     recordAudio: "ऑडिओ रेकॉर्ड करा (माइक)",
     stopRecording: "रेकॉर्डिंग थांबवा (ऐकत आहे...)",
@@ -431,10 +480,22 @@ export const TRANSLATIONS: Record<LanguageCode, Translations> = {
 
     langLabel: "Idioma",
     districtLabel: "Distrito",
+    districtPlaceholder: "Digite o nome do distrito (ex: Pune, Gadchiroli)",
     puneOption: "Pune (Alta Conectividade)",
     gadchiroliOption: "Gadchiroli (Baixo Acesso Móvel - Subnotificado)",
     localityLabel: "Localidade / Povoado",
-    localityPlaceholder: "Nome da Vila ou Cidade",
+    localityPlaceholder: "Nome da Vila ou Cidade (ex: Shirur)",
+
+    selectOnMap: "📍 Selecionar Local no Mapa (Opcional)",
+    locationPinned: "Local Marcado no Mapa",
+    removeLocationPin: "Remover Marcador",
+    editLocationPin: "Alterar Local",
+    mapModalTitle: "Marcar Local da Ocorrência no Mapa",
+    mapInstructions: "Clique no mapa ou arraste o marcador para apontar o local exato do problema de infraestrutura.",
+    locateMe: "Usar Meu GPS Atual",
+    confirmLocation: "Aplicar Este Local",
+    cancelMap: "Cancelar",
+    selectedCoordinates: "Coordenadas Selecionadas",
     descLabel: "Descrição da Demanda (Voz ou Texto)",
     recordAudio: "Gravar Áudio (Microfone)",
     stopRecording: "Parar Gravação (Ouvindo...)",

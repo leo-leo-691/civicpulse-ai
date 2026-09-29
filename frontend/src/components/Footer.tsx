@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { Globe2, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
@@ -21,17 +20,6 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <Link href="/citizen" className="hover:text-cyan-400 transition">
-              Citizen Portal
-            </Link>
-            <Link href="/dashboard" className="hover:text-cyan-400 transition">
-              Policymaker Dashboard
-            </Link>
-            <Link href="/admin" className="hover:text-cyan-400 transition">
-              Operations Control
-            </Link>
-          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-[11px] text-slate-500">

@@ -200,13 +200,6 @@ export default function PolicymakerDashboard() {
             {isSyncingData ? 'Loading Benchmarks...' : 'Load Reference Benchmarks'}
           </button>
 
-          <button
-            onClick={handleOpenBigQueryModal}
-            className="px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition border border-emerald-500/30"
-          >
-            <Database className="w-3.5 h-3.5 text-emerald-400" />
-            BigQuery Schema &amp; Export
-          </button>
 
           <span className="px-3 py-1 bg-slate-900 border border-slate-800 text-slate-300 text-xs font-mono rounded-full">
             Role: District Magistrate

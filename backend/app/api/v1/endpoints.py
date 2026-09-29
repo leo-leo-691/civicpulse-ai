@@ -65,7 +65,7 @@ def admin_get_decisions_audit(limit: int = 50, db: Session = Depends(get_db)):
     """
     Returns audit log of Human-in-the-Loop Recommendation Decisions.
     """
-    decisions = db.query(RecommendationDecision).order_by(RecommendationDecision.timestamp.desc()).limit(limit).all()
+    decisions = db.query(RecommendationDecision).order_by(RecommendationDecision.decided_at.desc()).limit(limit).all()
     return [
         {
             "id": d.id,
@@ -73,7 +73,7 @@ def admin_get_decisions_audit(limit: int = 50, db: Session = Depends(get_db)):
             "decision": d.decision,
             "decision_reason": d.decision_reason,
             "reviewer": d.reviewer,
-            "timestamp": d.timestamp.isoformat() if d.timestamp else None
+            "timestamp": d.decided_at.isoformat() if d.decided_at else None
         }
         for d in decisions
     ]
