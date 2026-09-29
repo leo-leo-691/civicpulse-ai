@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, Users, Activity, Sparkles, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, Sparkles, LogOut } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
 export default function Navigation() {
@@ -60,11 +60,7 @@ export default function Navigation() {
 
         {/* Right Action: DPG Badge */}
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Digital Public Good</span>
-            <span className="sm:hidden">DPG</span>
-          </span>
+
           {session && (
             <button
               onClick={() => signOut({ callbackUrl: '/' })}

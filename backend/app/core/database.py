@@ -10,6 +10,9 @@ if os.getenv("USE_SQLITE", "False").lower() == "true":
     if not db_url.startswith("sqlite"):
         db_url = "sqlite:///./civicpulse_dev.db"
 
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 if "sqlite" in db_url:
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
 else:

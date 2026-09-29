@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Mic, Send, MessageSquare, Search, CheckCircle, AlertTriangle, ShieldCheck, Camera, Sparkles, Image as ImageIcon, Eye } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Mic, Send, MessageSquare, Search, CheckCircle, AlertTriangle, ShieldCheck, Camera, Sparkles, Image as ImageIcon, Eye, Volume2, RotateCcw, Trash2, MapPin } from 'lucide-react';
 import {
   submitCitizenRequest,
   getCitizenRequestStatus,
@@ -11,16 +12,23 @@ import {
   MessagingWebhookResponse,
 } from '@/lib/api';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import { TRANSLATIONS, LanguageCode } from '@/lib/translations';
+
+const LocationPickerModal = dynamic(() => import('./LocationPickerModal'), { ssr: false });
 
 export default function CitizenPortal() {
   const { data: session, status } = useSession();
   const [showAuthPopup, setShowAuthPopup] = useState(false);
   const [activeTab, setActiveTab] = useState<'submit' | 'status' | 'messaging'>('submit');
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState<LanguageCode>('en');
   const [channel, setChannel] = useState('text');
-  const [district, setDistrict] = useState('Pune');
-  const [locality, setLocality] = useState('Shirur Village');
+  const [district, setDistrict] = useState('');
+  const [locality, setLocality] = useState('');
   const [inputText, setInputText] = useState('');
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [pinnedLocation, setPinnedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const [isRecording, setIsRecording] = useState(false);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -131,6 +139,25 @@ export default function CitizenPortal() {
     setAudioBase64(null);
   };
 
+  const handleLocationConfirmed = (loc: {
+    latitude: number;
+    longitude: number;
+    suggestedDistrict?: string;
+    suggestedLocality?: string;
+  }) => {
+    setPinnedLocation({ latitude: loc.latitude, longitude: loc.longitude });
+    if (loc.suggestedDistrict && !district) {
+      setDistrict(loc.suggestedDistrict);
+    }
+    if (loc.suggestedLocality && !locality) {
+      setLocality(loc.suggestedLocality);
+    }
+  };
+
+  const clearPinnedLocation = () => {
+    setPinnedLocation(null);
+  };
+
   // Status Lookup State
   const [searchRef, setSearchRef] = useState('');
   const [statusResult, setStatusResult] = useState<CitizenStatus | null>(null);
@@ -168,8 +195,10 @@ export default function CitizenPortal() {
           ...(audioBase64 ? { audio_base64: audioBase64, channel: 'voice' } : { channel: channel }),
           image_base64: imageBase64 || undefined,
           language: language,
-          district: district,
-          locality: locality,
+          district: district.trim() || undefined,
+          locality: locality.trim() || undefined,
+          latitude: pinnedLocation ? pinnedLocation.latitude : undefined,
+          longitude: pinnedLocation ? pinnedLocation.longitude : undefined,
           reporter_contact_hash: "web_user_hash"
         }),
         runVisualSteps()
@@ -235,7 +264,7 @@ export default function CitizenPortal() {
     }
   };
 
-  const setPreset = (presetLang: string, presetText: string) => {
+  const setPreset = (presetLang: LanguageCode, presetText: string) => {
     setLanguage(presetLang);
     setInputText(presetText);
   };
@@ -249,22 +278,22 @@ export default function CitizenPortal() {
             <div className="flex justify-center mb-4">
               <ShieldCheck className="w-12 h-12 text-cyan-400" />
             </div>
-            <h2 className="text-xl font-bold text-center text-white mb-2">Welcome to Citizen Voice</h2>
+            <h2 className="text-xl font-bold text-center text-white mb-2">{t.modalTitle}</h2>
             <p className="text-sm text-slate-300 text-center mb-6">
-              Sign in to track your infrastructure requests across devices, or continue as a guest to submit anonymously.
+              {t.modalDesc}
             </p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => signIn()}
                 className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-xl transition shadow-lg"
               >
-                Sign In / Create Account
+                {t.modalSignIn}
               </button>
               <button
                 onClick={handleDismissPopup}
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm rounded-xl border border-slate-700 transition"
               >
-                Continue without sign in
+                {t.modalGuest}
               </button>
             </div>
           </div>
@@ -275,32 +304,30 @@ export default function CitizenPortal() {
       <div className="border-b border-slate-800/80 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Citizen Voice Portal</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">{t.portalTitle}</h1>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              Multilingual Ingestion
+              {t.multilingualBadge}
             </span>
           </div>
-          <p className="text-slate-400 text-xs mt-1">Direct community signal ingestion via voice audio, photo analysis, text, and WhatsApp.</p>
+          <p className="text-slate-400 text-xs mt-1">{t.portalSubtitle}</p>
         </div>
         <div className="flex items-center gap-4">
           {session ? (
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-semibold text-white">{session.user?.name || "Citizen"}</p>
-                <p className="text-[10px] text-cyan-400 capitalize">{(session.user as any)?.role || "Citizen"}</p>
+                <p className="text-sm font-semibold text-white">{session.user?.name || t.citizenRole}</p>
+                <p className="text-[10px] text-cyan-400 capitalize">{(session.user as any)?.role || t.citizenRole}</p>
               </div>
               <button onClick={() => signOut()} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded text-white border border-slate-700 transition">
-                Sign Out
+                {t.signOut}
               </button>
             </div>
           ) : (
             <button onClick={() => signIn()} className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-xs font-bold rounded text-white shadow-lg transition">
-              Optional Sign In
+              {t.optionalSignIn}
             </button>
           )}
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30 shrink-0">
-            <ShieldCheck className="w-4 h-4" /> Digital Public Good
-          </span>
+
         </div>
       </div>
 
@@ -312,7 +339,7 @@ export default function CitizenPortal() {
             activeTab === 'submit' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Mic className="w-4 h-4" /> Submit Request
+          <Mic className="w-4 h-4" /> {t.tabSubmit}
         </button>
         <button
           onClick={() => setActiveTab('status')}
@@ -320,7 +347,7 @@ export default function CitizenPortal() {
             activeTab === 'status' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Search className="w-4 h-4" /> Check Request Status
+          <Search className="w-4 h-4" /> {t.tabStatus}
         </button>
         <button
           onClick={() => setActiveTab('messaging')}
@@ -328,7 +355,7 @@ export default function CitizenPortal() {
             activeTab === 'messaging' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <MessageSquare className="w-4 h-4" /> WhatsApp / SMS Channel Demo
+          <MessageSquare className="w-4 h-4" /> {t.tabMessaging}
         </button>
       </div>
 
@@ -338,48 +365,64 @@ export default function CitizenPortal() {
           {/* Quick Presets for Demo */}
           <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-xs space-y-2">
             <span className="font-semibold text-slate-300 block flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> Multilingual Demo Presets:
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> {t.presetsLabel}
             </span>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setPreset('en', 'Our village road is completely broken and ambulances cannot reach during emergencies.')}
-                className="px-2.5 py-1.5 bg-slate-800/90 border border-slate-700/80 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-xs"
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'en'
+                    ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
+                    : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
+                }`}
               >
-                🇬🇧 English Text
+                {t.presetEn}
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('hi', 'हमारे गांव में पिछले तीन साल से पीने का पानी नहीं आ रहा है। बच्चे बीमार हैं।')}
-                className="px-2.5 py-1.5 bg-slate-800/90 border border-slate-700/80 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-xs"
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'hi'
+                    ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
+                    : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
+                }`}
               >
-                🇮🇳 Hindi Report
+                {t.presetHi}
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('mr', 'आमच्या गावातील रस्ता अत्यंत खराब झाला आहे, शाळा सुटल्यावर मुले घरी येऊ शकत नाहीत.')}
-                className="px-2.5 py-1.5 bg-slate-800/90 border border-slate-700/80 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-xs"
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'mr'
+                    ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
+                    : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
+                }`}
               >
-                🇮🇳 Marathi Report
+                {t.presetMr}
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('pt', 'Nossa vila não tem água potável há três anos. As crianças estão sofrendo.')}
-                className="px-2.5 py-1.5 bg-slate-800/90 border border-slate-700/80 rounded-md text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-xs"
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'pt'
+                    ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
+                    : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
+                }`}
               >
-                🇧🇷 Portuguese (BRICS Demo)
+                {t.presetPt}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="citizen-language-select" className="block text-xs font-semibold text-slate-300 mb-1">Language</label>
+              <label htmlFor="citizen-language-select" className="block text-xs font-semibold text-slate-300 mb-1">{t.langLabel}</label>
               <select
                 id="citizen-language-select"
                 aria-label="Select Preferred Language"
                 value={language}
-                onChange={(e) => setLanguage(e.target.value)}
+                onChange={(e) => setLanguage(e.target.value as LanguageCode)}
                 className="w-full text-sm border border-slate-700 rounded-lg p-2.5 bg-slate-900 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
               >
                 <option value="en">English (English)</option>
@@ -389,20 +432,36 @@ export default function CitizenPortal() {
               </select>
             </div>
             <div>
-              <label htmlFor="citizen-district-select" className="block text-xs font-semibold text-slate-300 mb-1">District</label>
-              <select
-                id="citizen-district-select"
-                aria-label="Select District"
+              <label htmlFor="citizen-district-input" className="block text-xs font-semibold text-slate-300 mb-1">{t.districtLabel}</label>
+              <input
+                id="citizen-district-input"
+                list="district-suggestions"
+                aria-label="Enter or select District"
+                type="text"
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
-                className="w-full text-sm border border-slate-700 rounded-lg p-2.5 bg-slate-900 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
-              >
-                <option value="Pune">Pune (High Connectivity)</option>
-                <option value="Gadchiroli">Gadchiroli (Low Mobile Access - Under-Reported)</option>
-              </select>
+                className="w-full text-sm border border-slate-700 rounded-lg p-2.5 bg-slate-900 text-white placeholder-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
+                placeholder={t.districtPlaceholder}
+              />
+              <datalist id="district-suggestions">
+                <option value="Pune" />
+                <option value="Gadchiroli" />
+                <option value="Dharashiv" />
+                <option value="Nashik" />
+                <option value="Nagpur" />
+                <option value="Mumbai" />
+                <option value="Thane" />
+                <option value="Satara" />
+                <option value="Kolhapur" />
+                <option value="Amravati" />
+                <option value="Chhatrapati Sambhajinagar" />
+                <option value="Solapur" />
+                <option value="Ahmednagar" />
+                <option value="Nanded" />
+              </datalist>
             </div>
             <div>
-              <label htmlFor="citizen-locality-input" className="block text-xs font-semibold text-slate-300 mb-1">Locality / Village</label>
+              <label htmlFor="citizen-locality-input" className="block text-xs font-semibold text-slate-300 mb-1">{t.localityLabel}</label>
               <input
                 id="citizen-locality-input"
                 aria-label="Enter Locality or Village Name"
@@ -410,21 +469,70 @@ export default function CitizenPortal() {
                 value={locality}
                 onChange={(e) => setLocality(e.target.value)}
                 className="w-full text-sm border border-slate-700 rounded-lg p-2.5 bg-slate-900 text-white placeholder-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
-                placeholder="Village or Town Name"
+                placeholder={t.localityPlaceholder}
               />
             </div>
+          </div>
+
+          {/* Optional Interactive Map Location Picker */}
+          <div>
+            {!pinnedLocation ? (
+              <button
+                type="button"
+                onClick={() => setMapModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-800/90 hover:bg-slate-700/90 text-cyan-300 hover:text-cyan-200 text-xs font-semibold rounded-xl border border-cyan-500/30 hover:border-cyan-400/50 shadow-xs transition"
+              >
+                <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                {t.selectOnMap}
+              </button>
+            ) : (
+              <div className="p-3 bg-cyan-950/40 border border-cyan-700/60 rounded-xl flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-cyan-300 block">
+                      {t.locationPinned}
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-300">
+                      {pinnedLocation.latitude.toFixed(5)}° N, {pinnedLocation.longitude.toFixed(5)}° E
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMapModalOpen(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition"
+                  >
+                    {t.editLocationPin}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearPinnedLocation}
+                    aria-label={t.removeLocationPin}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    {t.removeLocationPin}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Voice vs Text toggle */}
           <div>
             <div className="flex justify-between items-center mb-1.5">
               <label htmlFor="citizen-description-textarea" className="text-xs font-semibold text-slate-300">
-                Citizen Description (Voice or Text)
+                {t.descLabel}
               </label>
               <button
                 type="button"
                 onClick={toggleRecording}
-                aria-label={isRecording ? 'Stop Recording' : 'Record Audio'}
+                aria-label={isRecording ? t.stopRecording : t.recordAudio}
                 className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs ${
                   isRecording
                     ? 'bg-red-600 text-white animate-pulse ring-2 ring-red-400'
@@ -432,22 +540,53 @@ export default function CitizenPortal() {
                 }`}
               >
                 <Mic className="w-3.5 h-3.5 text-cyan-400" />
-                {isRecording ? 'Stop Recording (Listening...)' : 'Record Audio (Microphone)'}
+                {isRecording ? t.stopRecording : t.recordAudio}
               </button>
             </div>
             {audioBase64 && !isRecording && (
-              <div className="mb-2 p-2.5 bg-emerald-950/40 border border-emerald-700/60 text-emerald-300 text-xs rounded-lg flex items-center justify-between">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle className="w-4 h-4 text-emerald-400" /> Audio recorded and ready for submission
-                </span>
-                <button
-                  type="button"
-                  onClick={clearAudio}
-                  aria-label="Clear recorded audio"
-                  className="text-slate-400 hover:text-white font-bold ml-2 text-xs"
-                >
-                  ✕ Clear
-                </button>
+              <div className="mb-3 p-3 bg-emerald-950/40 border border-emerald-700/60 rounded-xl space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="flex items-center gap-1.5 font-medium text-emerald-300 text-xs">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" /> {t.audioRecorded}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      aria-label={t.reRecord}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-cyan-300 bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition"
+                    >
+                      <RotateCcw className="w-3 h-3 text-cyan-400" />
+                      {t.reRecord}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAudio}
+                      aria-label={t.clear}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-400 hover:text-red-400 bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      {t.clear}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-emerald-800/30 flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 shrink-0">
+                    <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                    {t.reviewAudio}:
+                  </span>
+                  <audio
+                    id="audio-review-player"
+                    aria-label="Recorded audio playback"
+                    controls
+                    src={audioBase64}
+                    className="w-full h-8 rounded-lg accent-cyan-500 bg-slate-900/90"
+                    preload="metadata"
+                  >
+                    Your browser does not support audio playback.
+                  </audio>
+                </div>
               </div>
             )}
             {micError && (
@@ -462,7 +601,7 @@ export default function CitizenPortal() {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="w-full text-sm border border-slate-700 rounded-lg p-3 bg-slate-900 text-white placeholder-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
-              placeholder="Describe the infrastructure issue in your locality (road broken, water supply stopped, hospital roof damaged)..."
+              placeholder={t.descPlaceholder}
             />
           </div>
 
@@ -471,9 +610,9 @@ export default function CitizenPortal() {
             <div className="flex justify-between items-center">
               <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-cyan-400" />
-                Upload Infrastructure Photo
+                {t.photoLabel}
                 <span className="text-[10px] bg-cyan-500/10 text-cyan-400 font-bold px-2 py-0.5 rounded border border-cyan-500/30">
-                  Gemini Vision
+                  {t.photoTag}
                 </span>
               </label>
               {imageBase64 && (
@@ -482,12 +621,12 @@ export default function CitizenPortal() {
                   onClick={clearImage}
                   className="text-xs text-red-400 hover:text-red-300 font-semibold"
                 >
-                  ✕ Remove
+                  {t.photoRemove}
                 </button>
               )}
             </div>
             <p className="text-[11px] text-slate-400">
-              Attach a photo of the damaged road, pipe leak, power pole, or school to trigger automated multimodal severity verification.
+              {t.photoDesc}
             </p>
 
             <input
@@ -505,8 +644,8 @@ export default function CitizenPortal() {
                 className="cursor-pointer border-2 border-dashed border-slate-700 hover:border-cyan-400/60 bg-slate-900/40 hover:bg-slate-800/40 rounded-xl p-4 text-center flex flex-col items-center justify-center gap-1.5 transition"
               >
                 <ImageIcon className="w-6 h-6 text-slate-500" />
-                <span className="text-xs font-medium text-slate-300">Click to attach photo or drag file here</span>
-                <span className="text-[10px] text-slate-500">PNG, JPG, WEBP up to 5MB</span>
+                <span className="text-xs font-medium text-slate-300">{t.photoAttachPrompt}</span>
+                <span className="text-[10px] text-slate-500">{t.photoLimit}</span>
               </label>
             ) : (
               <div className="flex items-center gap-3 bg-slate-900 p-3 rounded-lg border border-slate-700">
@@ -518,7 +657,7 @@ export default function CitizenPortal() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-slate-200 truncate">{imageFileName || 'infrastructure_photo.jpg'}</p>
                   <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
-                    <Sparkles className="w-3 h-3 text-cyan-400" /> Ready for Gemini Multimodal Inspection
+                    <Sparkles className="w-3 h-3 text-cyan-400" /> {t.photoReady}
                   </p>
                 </div>
               </div>
@@ -531,7 +670,7 @@ export default function CitizenPortal() {
             className="w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-cyan-950/40"
           >
             <Send className="w-4 h-4" />
-            {loading ? 'AI Processing & Deduplicating...' : 'Submit Infrastructure Request'}
+            {loading ? t.submittingBtn : t.submitBtn}
           </button>
 
           {/* AI Processing Step Visualization while loading */}
@@ -540,10 +679,10 @@ export default function CitizenPortal() {
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-cyan-400 animate-pulse" />
-                  AI processing request...
+                  {t.aiProcessing}
                 </span>
                 <span className="text-[11px] font-semibold text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
-                  Step {processingStep} of 4
+                  {t.stepOf(processingStep)}
                 </span>
               </div>
               <div className="space-y-2">
@@ -566,10 +705,10 @@ export default function CitizenPortal() {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">1. Multi-Language Ingestion &amp; Audio Parsing</span>
-                      {processingStep === 1 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Processing input...</span>}
+                      <span className="font-semibold">{t.step1Title}</span>
+                      {processingStep === 1 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{t.step1Running}</span>}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Normalizing citizen input and preparing the report</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{t.step1Desc}</p>
                   </div>
                 </div>
 
@@ -592,10 +731,10 @@ export default function CitizenPortal() {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">2. LLM Structured Categorization &amp; Severity</span>
-                      {processingStep === 2 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Analyzing request...</span>}
+                      <span className="font-semibold">{t.step2Title}</span>
+                      {processingStep === 2 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{t.step2Running}</span>}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Identifying infrastructure category, issue type and severity</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{t.step2Desc}</p>
                   </div>
                 </div>
 
@@ -618,10 +757,10 @@ export default function CitizenPortal() {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">3. Vector Embedding &amp; Section 13 Deduplication</span>
-                      {processingStep === 3 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Checking similar reports...</span>}
+                      <span className="font-semibold">{t.step3Title}</span>
+                      {processingStep === 3 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{t.step3Running}</span>}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Checking for similar citizen reports using semantic similarity</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{t.step3Desc}</p>
                   </div>
                 </div>
 
@@ -640,10 +779,10 @@ export default function CitizenPortal() {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold">4. Reference ID &amp; District Cluster Registration</span>
-                      {processingStep === 4 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Preparing request registration...</span>}
+                      <span className="font-semibold">{t.step4Title}</span>
+                      {processingStep === 4 && <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{t.step4Running}</span>}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Registering the request and updating demand information</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{t.step4Desc}</p>
                   </div>
                 </div>
               </div>
@@ -666,17 +805,17 @@ export default function CitizenPortal() {
             <div className="p-5 bg-slate-900/90 border border-emerald-500/40 rounded-xl space-y-3 shadow-lg shadow-emerald-950/20">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" /> AI processing complete — Request Ingested!
+                  <CheckCircle className="w-5 h-5 text-emerald-400" /> {t.resultTitle}
                 </div>
                 <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-600/40">
-                  Verified
+                  {t.verifiedBadge}
                 </span>
               </div>
               <div className="text-xs text-slate-300 grid grid-cols-2 gap-3 pt-1">
-                <div><span className="font-semibold text-slate-500">Reference:</span> <code className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">{submitResult.reference_code}</code></div>
-                <div><span className="font-semibold text-slate-500">Category:</span> <span className="font-medium text-white">{submitResult.category}</span></div>
-                <div><span className="font-semibold text-slate-500">Subcategory:</span> <span className="font-medium text-white">{submitResult.subcategory}</span></div>
-                <div><span className="font-semibold text-slate-500">Severity:</span> <span className="uppercase text-amber-400 font-bold">{submitResult.severity}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.refLabel}</span> <code className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">{submitResult.reference_code}</code></div>
+                <div><span className="font-semibold text-slate-500">{t.catLabel}</span> <span className="font-medium text-white">{submitResult.category}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.subcatLabel}</span> <span className="font-medium text-white">{submitResult.subcategory}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.sevLabel}</span> <span className="uppercase text-amber-400 font-bold">{submitResult.severity}</span></div>
               </div>
 
               {submitResult.visual_evidence && (
@@ -684,10 +823,10 @@ export default function CitizenPortal() {
                   <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
                     <span className="font-bold text-slate-200 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                      Gemini Multimodal Vision Analysis
+                      {t.geminiAnalysis}
                     </span>
                     <span className="text-[10px] bg-cyan-950/60 text-cyan-300 font-semibold px-2 py-0.5 rounded border border-cyan-800/60">
-                      Confidence: {Math.round((submitResult.visual_evidence.confidence || 0.92) * 100)}%
+                      {t.confidence} {Math.round((submitResult.visual_evidence.confidence || 0.92) * 100)}%
                     </span>
                   </div>
                   {imageBase64 && (
@@ -720,14 +859,14 @@ export default function CitizenPortal() {
                 <div className="p-2.5 bg-amber-950/40 border border-amber-700/60 text-amber-200 text-xs rounded-lg flex items-start gap-2 mt-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block text-amber-300">Similar request detected</span>
-                    <span>Linked to: <strong>{submitResult.duplicate_of || 'Existing Village Report'}</strong> (Section 13 duplicate collapsed, demand score updated).</span>
+                    <span className="font-bold block text-amber-300">{t.similarDetectedTitle}</span>
+                    <span>{t.similarDetectedLinked} <strong>{submitResult.duplicate_of || 'Existing Village Report'}</strong> {t.similarDetectedDesc}</span>
                   </div>
                 </div>
               ) : (
                 <div className="p-2.5 bg-emerald-950/40 border border-emerald-700/60 text-emerald-200 text-xs rounded-lg flex items-center gap-2 mt-2">
                   <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span><strong>No duplicate request detected:</strong> Logged as a new unique district report.</span>
+                  <span><strong>{t.noDuplicateTitle}</strong> {t.noDuplicateDesc}</span>
                 </div>
               )}
             </div>
@@ -743,7 +882,7 @@ export default function CitizenPortal() {
               type="text"
               value={searchRef}
               onChange={(e) => setSearchRef(e.target.value)}
-              placeholder="Enter Reference Code (e.g. #REQ-48213)"
+              placeholder={t.statusPlaceholder}
               className="flex-1 text-sm border border-slate-700 rounded-lg p-3 bg-slate-900 text-white placeholder-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
             />
             <button
@@ -751,7 +890,7 @@ export default function CitizenPortal() {
               disabled={loading}
               className="px-6 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-sm rounded-lg flex items-center gap-2 transition"
             >
-              <Search className="w-4 h-4" /> Check Status
+              <Search className="w-4 h-4" /> {loading ? t.checkingStatusBtn : t.checkStatusBtn}
             </button>
           </form>
 
@@ -765,7 +904,7 @@ export default function CitizenPortal() {
             <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
-                  <span className="text-xs text-slate-500 uppercase font-semibold">Reference Code</span>
+                  <span className="text-xs text-slate-500 uppercase font-semibold">{t.statusRefTitle}</span>
                   <h3 className="text-xl font-bold text-white font-mono">{statusResult.reference_code}</h3>
                 </div>
                 <span className="px-3 py-1 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-xs font-bold rounded-full">
@@ -773,17 +912,17 @@ export default function CitizenPortal() {
                 </span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs text-slate-300">
-                <div><span className="font-semibold text-slate-500">Category:</span> <br/><span className="text-white font-medium">{statusResult.category}</span></div>
-                <div><span className="font-semibold text-slate-500">Subcategory:</span> <br/><span className="text-white font-medium">{statusResult.subcategory}</span></div>
-                <div><span className="font-semibold text-slate-500">District:</span> <br/><span className="text-white font-medium">{statusResult.district}</span></div>
-                <div><span className="font-semibold text-slate-500">Associated Cluster:</span> <br/><span className="text-white font-medium">{statusResult.cluster_title}</span></div>
-                <div><span className="font-semibold text-slate-500">Merged Unique Reports:</span> <br/><span className="text-cyan-400 font-bold">{statusResult.cluster_unique_requests} reports</span></div>
-                <div><span className="font-semibold text-slate-500">Cluster Priority Score:</span> <br/><span className="text-emerald-400 font-bold text-sm">{statusResult.cluster_priority_score} / 100</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusCategory}</span> <br/><span className="text-white font-medium">{statusResult.category}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusSubcategory}</span> <br/><span className="text-white font-medium">{statusResult.subcategory}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusDistrict}</span> <br/><span className="text-white font-medium">{statusResult.district}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusCluster}</span> <br/><span className="text-white font-medium">{statusResult.cluster_title}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusMerged}</span> <br/><span className="text-cyan-400 font-bold">{statusResult.cluster_unique_requests} {t.reportsCount}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusPriority}</span> <br/><span className="text-emerald-400 font-bold text-sm">{statusResult.cluster_priority_score} / 100</span></div>
               </div>
 
               {statusResult.image_data && (
                 <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                  <span className="font-semibold text-xs text-slate-400 block mb-2">Attached Infrastructure Photo:</span>
+                  <span className="font-semibold text-xs text-slate-400 block mb-2">{t.statusAttachedPhoto}</span>
                   <img src={statusResult.image_data} alt="Citizen issue" className="w-32 h-32 object-cover rounded-md border border-slate-700 shadow-xs" />
                 </div>
               )}
@@ -795,16 +934,9 @@ export default function CitizenPortal() {
       {/* Tab 3: Messaging Channel Webhook */}
       {activeTab === 'messaging' && (
         <form onSubmit={handleWebhookSubmit} className="space-y-4">
-          <div className="bg-emerald-950/30 border border-emerald-700/50 p-4 rounded-xl text-xs text-emerald-200 space-y-1">
-            <span className="font-bold text-emerald-400 block flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4" /> Section 11 — Inbound Messaging Webhook Channel
-            </span>
-            <p className="text-slate-300">Simulates live WhatsApp / SMS payload sent to <code className="bg-slate-900 border border-slate-700 text-cyan-300 px-1.5 py-0.5 rounded font-mono">POST /api/v1/channels/messaging/webhook</code>.</p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Sender WhatsApp / Phone Number</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">{t.senderPhone}</label>
               <input
                 type="text"
                 value={webhookPhone}
@@ -813,10 +945,10 @@ export default function CitizenPortal() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Channel Provider</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">{t.channelProvider}</label>
               <input
                 type="text"
-                value="Twilio WhatsApp Sandbox"
+                value={t.channelProviderVal}
                 disabled
                 className="w-full text-sm border border-slate-800 bg-slate-950 rounded-lg p-2.5 text-slate-500"
               />
@@ -824,7 +956,7 @@ export default function CitizenPortal() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Inbound Message Body</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">{t.inboundBody}</label>
             <textarea
               rows={3}
               value={webhookText}
@@ -838,7 +970,7 @@ export default function CitizenPortal() {
             disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-950/40"
           >
-            <MessageSquare className="w-4 h-4" /> Trigger Inbound Webhook Payload
+            <MessageSquare className="w-4 h-4" /> {loading ? t.triggeringWebhook : t.triggerWebhook}
           </button>
 
           {webhookError && (
@@ -849,11 +981,24 @@ export default function CitizenPortal() {
 
           {webhookResponse && (
             <div className="p-4 bg-slate-950 text-emerald-400 font-mono text-xs rounded-xl border border-slate-800 space-y-1">
-              <span className="text-slate-500 font-semibold block">// Outbound Automated Response Pushed to Citizen WhatsApp:</span>
+              <span className="text-slate-500 font-semibold block">{t.outboundResponse}</span>
               <p className="text-white">"{webhookResponse.reply}"</p>
             </div>
           )}
         </form>
+      )}
+
+      {/* Map Picker Modal */}
+      {mapModalOpen && (
+        <LocationPickerModal
+          isOpen={mapModalOpen}
+          onClose={() => setMapModalOpen(false)}
+          onConfirm={handleLocationConfirmed}
+          initialLat={pinnedLocation?.latitude}
+          initialLng={pinnedLocation?.longitude}
+          currentDistrict={district}
+          t={t}
+        />
       )}
     </div>
   );

@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Globe2, ShieldCheck, Terminal, Heart } from 'lucide-react';
+import { Globe2, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -21,26 +20,6 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <Link href="/citizen" className="hover:text-cyan-400 transition">
-              Citizen Portal
-            </Link>
-            <Link href="/dashboard" className="hover:text-cyan-400 transition">
-              Policymaker Dashboard
-            </Link>
-            <Link href="/admin" className="hover:text-cyan-400 transition">
-              Operations Control
-            </Link>
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/docs`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-slate-400 hover:text-white transition"
-            >
-              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-              FastAPI OpenAPI Docs
-            </a>
-          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 text-[11px] text-slate-500">
