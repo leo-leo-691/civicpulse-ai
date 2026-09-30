@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Layers, MapPin, AlertTriangle, CheckCircle, Award, Sliders, Users, FileText, ArrowRight, Database, RefreshCw, X } from 'lucide-react';
+import { Layers, MapPin, AlertTriangle, CheckCircle, CheckCircle2, Clock, XCircle, Loader2, FileSearch, ShieldCheck, Award, Sliders, Users, FileText, ArrowRight, Database, RefreshCw, X } from 'lucide-react';
 import MapView from './MapView';
 import EvidencePanel from './EvidencePanel';
 import ImpactTracker from './ImpactTracker';
@@ -27,6 +27,7 @@ export default function PolicymakerDashboard() {
   const [decisionReason, setDecisionReason] = useState('');
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
   // National Data Sync & BigQuery State
@@ -123,20 +124,60 @@ export default function PolicymakerDashboard() {
     rec => rec.cluster_id === selectedHotspot?.id || rec.id === selectedHotspot?.id
   );
 
+  // Sync decision status when hotspot or recommendations update
+  useEffect(() => {
+    if (selectedHotspot) {
+      const rec = recommendations.find(
+        r => r.cluster_id === selectedHotspot.id || r.id === selectedHotspot.id
+      );
+      if (rec?.status && rec.status !== 'Pending Review') {
+        setDecisionStatus(rec.status);
+      } else {
+        setDecisionStatus(null);
+      }
+      setDecisionError(null);
+    }
+  }, [selectedHotspot, recommendations]);
+
   const handleDecision = async (status: string) => {
-    if (!selectedHotspot) return;
+    if (!selectedHotspot || isSubmittingDecision) return;
     const targetRecId = selectedRecommendation?.id || selectedHotspot.id || 1;
-    setDecisionStatus(null);
+    setIsSubmittingDecision(true);
     setDecisionError(null);
     try {
       await recordRecommendationDecision(targetRecId, {
         decision: status,
-        decision_reason: decisionReason || "Decision recorded by District Collector.",
+        decision_reason: decisionReason.trim() || `Decision recorded as [${status}] by District Collector / Magistrate.`,
         reviewer: "District Collector / Magistrate"
       });
       setDecisionStatus(status);
+
+      // Update recommendations state immediately
+      setRecommendations(prev => {
+        const found = prev.find(r => r.id === targetRecId || r.cluster_id === selectedHotspot.id);
+        if (found) {
+          return prev.map(r => (r.id === found.id ? { ...r, status } : r));
+        }
+        return [...prev, {
+          id: targetRecId,
+          cluster_id: selectedHotspot.id,
+          proposed_intervention: selectedHotspot.title,
+          priority_score: selectedHotspot.priority_score,
+          digital_access_correction: selectedHotspot.digital_access_correction,
+          evidence: selectedHotspot.evidence,
+          status
+        }];
+      });
+
+      // Clear custom reason input upon successful decision
+      setDecisionReason('');
+
+      // Refresh overview KPIs in background
+      getAnalyticsOverview().then(data => setOverview(data)).catch(() => {});
     } catch (e: any) {
-      setDecisionError("Failed to record decision: Server unreachable.");
+      setDecisionError(`Failed to record decision: ${e.message || 'Server unreachable'}`);
+    } finally {
+      setIsSubmittingDecision(false);
     }
   };
 
@@ -287,8 +328,28 @@ export default function PolicymakerDashboard() {
             </span>
           </div>
 
-          <div className="text-xs text-slate-300 bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-1 leading-relaxed">
-            <p className="font-semibold text-cyan-300">Recommended Intervention:</p>
+          <div className="text-xs text-slate-300 bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2 leading-relaxed">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-cyan-300">Recommended Intervention:</p>
+              {decisionStatus ? (
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border inline-flex items-center gap-1 ${
+                  decisionStatus === 'Approved'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : decisionStatus === 'Needs Analysis'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                }`}>
+                  {decisionStatus === 'Approved' && <CheckCircle2 className="w-3 h-3" />}
+                  {decisionStatus === 'Needs Analysis' && <Clock className="w-3 h-3" />}
+                  {decisionStatus === 'Rejected' && <XCircle className="w-3 h-3" />}
+                  Current Status: {decisionStatus === 'Needs Analysis' ? 'Field Verification' : decisionStatus}
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-slate-800 text-slate-400 border border-slate-700">
+                  Status: Pending Review
+                </span>
+              )}
+            </div>
             <p className="text-slate-200">"{selectedRecommendation?.proposed_intervention || `${selectedHotspot.title} in ${selectedHotspot.district} District (${selectedHotspot.affected_villages} Villages)`}"</p>
           </div>
 
@@ -306,33 +367,80 @@ export default function PolicymakerDashboard() {
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
               onClick={() => handleDecision('Approved')}
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              disabled={isSubmittingDecision}
+              className={`px-5 py-2.5 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm ${
+                decisionStatus === 'Approved'
+                  ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+              } disabled:opacity-50`}
             >
-              Approve Project Budget
+              {isSubmittingDecision && decisionStatus !== 'Approved' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              )}
+              {decisionStatus === 'Approved' ? 'Project Budget Approved ✓' : 'Approve Project Budget'}
             </button>
+
             <button
               onClick={() => handleDecision('Needs Analysis')}
-              className="px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold text-xs rounded-xl transition"
+              disabled={isSubmittingDecision}
+              className={`px-5 py-2.5 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 border ${
+                decisionStatus === 'Needs Analysis'
+                  ? 'bg-amber-500/30 text-amber-200 border-amber-400 ring-2 ring-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40'
+              } disabled:opacity-50`}
             >
-              Request Field Verification
+              {isSubmittingDecision && decisionStatus !== 'Needs Analysis' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileSearch className="w-3.5 h-3.5" />
+              )}
+              {decisionStatus === 'Needs Analysis' ? 'Field Verification Requested ✓' : 'Request Field Verification'}
             </button>
+
             <button
               onClick={() => handleDecision('Rejected')}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold text-xs rounded-xl transition"
+              disabled={isSubmittingDecision}
+              className={`px-5 py-2.5 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 border ${
+                decisionStatus === 'Rejected'
+                  ? 'bg-rose-950/70 text-rose-300 border-rose-500/60 ring-2 ring-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.3)]'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+              } disabled:opacity-50`}
             >
-              Reject Proposal
+              {isSubmittingDecision && decisionStatus !== 'Rejected' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <XCircle className="w-3.5 h-3.5" />
+              )}
+              {decisionStatus === 'Rejected' ? 'Proposal Rejected ✓' : 'Reject Proposal'}
             </button>
           </div>
 
-          {decisionStatus && (
-            <div className="p-3 bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-              Decision recorded as [{decisionStatus}] by District Collector. Audit log updated.
+          {/* Contextual Feedback Banners matching exact status */}
+          {decisionStatus === 'Approved' && (
+            <div className="p-3.5 bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 text-xs font-semibold rounded-xl flex items-center gap-2.5 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Project budget approved &amp; sanctioned under Jal Jeevan Mission / PMGSY. Section 29 Human Decision Audit Log updated.</span>
+            </div>
+          )}
+
+          {decisionStatus === 'Needs Analysis' && (
+            <div className="p-3.5 bg-amber-950/60 border border-amber-500/50 text-amber-200 text-xs font-semibold rounded-xl flex items-center gap-2.5 animate-fadeIn">
+              <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Field verification officially requested. Dispatched to Block Development and Ground Engineering Officers for inspection.</span>
+            </div>
+          )}
+
+          {decisionStatus === 'Rejected' && (
+            <div className="p-3.5 bg-rose-950/60 border border-rose-500/50 text-rose-200 text-xs font-semibold rounded-xl flex items-center gap-2.5 animate-fadeIn">
+              <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>Proposal officially rejected with administrative justification. Recorded permanently in Section 29 Audit Log.</span>
             </div>
           )}
 
           {decisionError && (
-            <div className="p-3 bg-red-950/50 border border-red-500/40 text-red-300 text-xs font-bold rounded-xl flex items-center gap-2">
+            <div className="p-3.5 bg-red-950/50 border border-red-500/40 text-red-300 text-xs font-bold rounded-xl flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
               {decisionError}
             </div>

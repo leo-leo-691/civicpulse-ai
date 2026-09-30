@@ -4,7 +4,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4?logo=google)](https://ai.google.dev/)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.8_Flash-4285F4?logo=google)](https://ai.google.dev/)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL_3D-000000?logo=three.js)](https://threejs.org/)
 [![DPGA Indicators](https://img.shields.io/badge/DPGA_Standard-9%2F9_Compliant-10b981)](https://digitalpublicgoods.net/)
 [![Tests](https://img.shields.io/badge/Backend_Tests-31%2F31_Passed-brightgreen)](backend/tests/)
@@ -23,7 +23,7 @@ Traditional public grievance and civic infrastructure allocation systems suffer 
 3. **Fragmented Noise vs. Geographic Signal**: Disparate citizen complaints arrive as thousands of isolated tickets rather than unified spatial clusters representing systemic infrastructure breakdowns (e.g., a burst main pipe vs. 50 individual tap complaints).
 4. **Black-Box Allocations & Zero Follow-Through**: Municipal decisions lack explainability, leaving citizens alienated and failing to measure whether disbursed capital actually resolved the underlying grievance.
 
-**CivicPulse AI** solves this by establishing an end-to-end, multilingual Digital Public Infrastructure (DPI) platform. Built upon Google Gemini 2.5 Flash, raw Three.js WebGL visualization, spatial DBSCAN clustering, and an explainable **Digital Divide Corrected Priority Engine**, CivicPulse equips District Magistrates and policymakers to disburse capital with mathematical equity, complete transparency, and closed-loop impact verification.
+**CivicPulse AI** solves this by establishing an end-to-end, multilingual Digital Public Infrastructure (DPI) platform. Built upon Google Gemini 3.8 Flash, raw Three.js WebGL visualization, spatial DBSCAN clustering, and an explainable **Digital Divide Corrected Priority Engine**, CivicPulse equips District Magistrates and policymakers to disburse capital with mathematical equity, complete transparency, and closed-loop impact verification.
 
 ---
 
@@ -46,7 +46,7 @@ flowchart TD
     %% AI Ingestion & Analysis Engine
     subgraph AIEngine["2. Multimodal AI Processing Engine (FastAPI)"]
         STT["Speech-to-Text Transcriber (Whisper / Gemini)"]
-        GeminiLLM["Google Gemini 2.5 Flash (Category, Urgency, Needs)"]
+        GeminiLLM["Google Gemini 3.8 Flash (Category, Urgency, Needs)"]
         GeminiVision["Gemini Multimodal Vision (Damage Validation & Fraud Filter)"]
         Embedder["Vector Embedding Generator (text-embedding-004)"]
         RateLimit["Rate-Limiting & Abuse Detection Engine"]
@@ -188,7 +188,7 @@ Follow this 5-step path to inspect every tier of the platform:
 
 5. **Verify AI Providers & Audit Trail (`http://localhost:3000/admin`)**:
    - Open the **Admin Console**.
-   - Inspect the **AI Foundation Model Providers** panel (verifying Gemini 2.5 Flash status).
+   - Inspect the **AI Foundation Model Providers** panel (verifying Gemini 3.8 Flash status).
    - Check the **Human-In-The-Loop Governance Audit Log** to verify that your approval decision from Step 3 was immutably recorded.
 
 ---
@@ -224,7 +224,7 @@ CivicPulse AI is architected from day one in compliance with the **9 UN DPGA Ind
 
 ### Backend & AI Analytics Layer
 - **API Framework**: [FastAPI 0.110](https://fastapi.tiangolo.com/) (Python 3.11+, asynchronous ASGI)
-- **AI & Multimodal Reasoning**: [Google Gemini 2.5 Flash](https://ai.google.dev/) via `google-genai` SDK
+- **AI & Multimodal Reasoning**: [Google Gemini 3.8 Flash](https://ai.google.dev/) via `google-genai` SDK
 - **Embeddings**: `text-embedding-004` (768-dimensional semantic representations)
 - **Spatial Clustering Engine**: Scikit-Learn (DBSCAN with Haversine metric)
 - **Enterprise Analytics**: Google Cloud BigQuery partitioned DDL and JSON batch export

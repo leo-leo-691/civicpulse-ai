@@ -73,7 +73,7 @@ def process_incoming_request(
     
     # 0. Rate limiting (A 3b)
     if payload.reporter_contact_hash:
-        one_hour_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+        one_hour_ago = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
         recent_count = db.query(CitizenRequest).filter(
             CitizenRequest.reporter_contact_hash == payload.reporter_contact_hash,
             CitizenRequest.created_at >= one_hour_ago
@@ -228,11 +228,11 @@ def process_incoming_request(
         if best_cluster:
             best_cluster.unique_request_count += 1
             best_cluster.total_request_count += 1
-            new_req.cluster_id = best_cluster.id
+            setattr(new_req, "cluster_id", best_cluster.id)
             db.add(best_cluster)
         else:
             # Provisional no-cluster state: cluster_id = None (pending batch DBSCAN clustering)
-            new_req.cluster_id = None
+            setattr(new_req, "cluster_id", None)
         db.add(new_req)
     else:
         # Linked duplicates inherit primary request's cluster without creating new centroids
@@ -241,7 +241,7 @@ def process_incoming_request(
             if c:
                 c.total_request_count += 1
                 db.add(c)
-            new_req.cluster_id = original_req.cluster_id
+            setattr(new_req, "cluster_id", original_req.cluster_id)
 
     db.commit()
     db.refresh(new_req)
