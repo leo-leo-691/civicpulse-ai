@@ -639,7 +639,7 @@ export default function StoryScene() {
             Raw Vernacular Voice Transformed into Structured Evidence
           </h2>
           <p className="text-slate-300 text-sm leading-relaxed">
-            Google Gemini 2.5 Flash ingests audio recordings in Marathi, Hindi, and English. It extracts civic category, severity scores, and validates citizen photographs against computer vision fraud models — discarding spam and stock photos instantly.
+            Google Gemini 3.8 Flash ingests audio recordings in Marathi, Hindi, and English. It extracts civic category, severity scores, and validates citizen photographs against computer vision fraud models — discarding spam and stock photos instantly.
           </p>
           <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 text-xs font-mono text-slate-400 space-y-1">
             <div className="text-purple-300">✓ Vernacular Whisper/Gemini STT</div>

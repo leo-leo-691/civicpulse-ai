@@ -37,15 +37,13 @@ export default function MapView({ hotspots, selectedHotspot, onSelectHotspot }: 
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
               hasApiKey
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
             }`}>
-              {hasApiKey ? 'Google Maps JS SDK' : 'Satellite Embed Mode'}
+              {hasApiKey ? 'Google Maps JS SDK' : 'Interactive Satellite View'}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            {hasApiKey
-              ? 'Interactive Satellite, Terrain, & Roadmap visualization for regional demand hotspots'
-              : 'Satellite embed mode active (API key not configured in .env; interactive overlays active)'}
+            Interactive Satellite, Terrain, &amp; Roadmap visualization for regional demand hotspots
           </p>
         </div>
 

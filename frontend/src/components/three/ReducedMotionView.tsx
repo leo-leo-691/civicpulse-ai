@@ -74,7 +74,7 @@ export default function ReducedMotionView() {
             </span>
             <h3 className="text-lg font-bold text-white">Multimodal Extraction</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Google Gemini 2.5 Flash extracts categories, urgency scores, and verifies photo damage, filtering out spam and stock imagery automatically.
+              Google Gemini 3.8 Flash extracts categories, urgency scores, and verifies photo damage, filtering out spam and stock imagery automatically.
             </p>
           </div>
 

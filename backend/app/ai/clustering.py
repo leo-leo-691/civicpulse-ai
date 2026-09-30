@@ -187,7 +187,8 @@ class SemanticClusterEngine:
                 total_count = unique_count + len(linked_duplicates)
 
                 # Ground-truth population proxy & locality aggregation
-                linked_locations = list({r.location for r in req_group if r.location})
+                loc_ids = list({r.location_id for r in req_group if r.location_id})
+                linked_locations = db.query(Location).filter(Location.id.in_(loc_ids)).all() if loc_ids else []
                 affected_villages = len(linked_locations)
                 pop_proxy = sum((loc.demographics.population for loc in linked_locations if loc and loc.demographics), 0) or None
 
@@ -199,11 +200,11 @@ class SemanticClusterEngine:
                 existing_cluster = db.query(RequestCluster).filter(
                     RequestCluster.category == cat,
                     RequestCluster.district == district,
-                    RequestCluster.status == "Active"
+                    RequestCluster.status != "Archived"
                 ).first()
 
                 # Calculate the priority score with real data
-                location = req_group[0].location
+                location = linked_locations[0] if linked_locations else None
                 infra_coverage = location.infrastructure.overall_index if location and location.infrastructure else 35.0
                 vuln_index = location.demographics.vulnerability_index if location and location.demographics else 75.0
                 mob_pen = location.demographics.mobile_penetration_rate if location and location.demographics else (48.0 if district == "Pune" else 75.0)
@@ -262,9 +263,9 @@ class SemanticClusterEngine:
                     ).update({CitizenRequest.cluster_id: cluster_id}, synchronize_session=False)
 
             # 4. Stale Cluster Archiving
-            # Archive active clusters that now have 0 primary requests
-            all_active_clusters = db.query(RequestCluster).filter(RequestCluster.status == "Active").all()
-            for c in all_active_clusters:
+            # Archive any clusters that now have 0 primary requests
+            all_clusters = db.query(RequestCluster).filter(RequestCluster.status != "Archived").all()
+            for c in all_clusters:
                 if c.id not in active_cluster_ids:
                     remaining_primaries = db.query(CitizenRequest).filter(
                         CitizenRequest.cluster_id == c.id,
@@ -273,6 +274,7 @@ class SemanticClusterEngine:
                     if remaining_primaries == 0:
                         c.status = "Archived"
                         c.unique_request_count = 0
+                        db.add(c)
                         db.add(c)
                         # Archive linked recommendations so they don't point to obsolete active clusters
                         db.query(Recommendation).filter(
