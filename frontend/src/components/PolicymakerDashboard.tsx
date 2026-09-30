@@ -146,8 +146,8 @@ export default function PolicymakerDashboard() {
     try {
       const res = await syncNationalPublicData();
       setSyncFeedback(`Successfully loaded seeded reference benchmarks for ${res.synced_districts || 3} districts.`);
-      getAnalyticsOverview().then(data => setOverview(data)).catch(() => { });
-      getHotspots().then(data => setHotspots(data)).catch(() => { });
+      getAnalyticsOverview().then(data => setOverview(data)).catch(() => {});
+      getHotspots().then(data => setHotspots(data)).catch(() => {});
     } catch (e) {
       setSyncFeedback('Loaded seeded district demographic and infrastructure reference benchmarks.');
     } finally {

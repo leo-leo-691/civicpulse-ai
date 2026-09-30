@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Mic, Send, MessageSquare, Search, CheckCircle, AlertTriangle, ShieldCheck, Camera, Sparkles, Image as ImageIcon, Eye, Volume2, RotateCcw, Trash2, MapPin, Play, Pause } from 'lucide-react';
+import { Mic, Send, MessageSquare, Search, CheckCircle, AlertTriangle, ShieldCheck, Camera, Sparkles, Image as ImageIcon, Eye, Volume2, RotateCcw, Trash2, MapPin } from 'lucide-react';
 import {
   submitCitizenRequest,
   getCitizenRequestStatus,
@@ -15,46 +15,6 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { TRANSLATIONS, LanguageCode } from '@/lib/translations';
 
 const LocationPickerModal = dynamic(() => import('./LocationPickerModal'), { ssr: false });
-
-/**
- * Encodes Float32 audio samples into a standard 16-bit PCM WAV Blob.
- * Guaranteed to play cleanly across all browsers with exact duration and full volume.
- */
-function encodeWAV(samples: Float32Array, sampleRate: number): Blob {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
-
-  const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  /* RIFF header */
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeString(8, 'WAVE');
-  /* fmt chunk */
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true); // PCM subchunk size
-  view.setUint16(20, 1, true); // Linear PCM format
-  view.setUint16(22, 1, true); // Mono channel
-  view.setUint32(24, sampleRate, true); // Sample rate
-  view.setUint32(28, sampleRate * 2, true); // Byte rate (16-bit mono = sampleRate * 2)
-  view.setUint16(32, 2, true); // Block align
-  view.setUint16(34, 16, true); // 16 bits per sample
-  /* data chunk */
-  writeString(36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-
-  return new Blob([view], { type: 'audio/wav' });
-}
 
 export default function CitizenPortal() {
   const { data: session, status } = useSession();
@@ -71,10 +31,6 @@ export default function CitizenPortal() {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const [isRecording, setIsRecording] = useState(false);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [micVolumeLevel, setMicVolumeLevel] = useState<number>(0);
-  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState<string>('');
   const [micError, setMicError] = useState<string>('');
@@ -85,40 +41,15 @@ export default function CitizenPortal() {
   const [webhookError, setWebhookError] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
-  const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const audioSamplesRef = useRef<Float32Array[]>([]);
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   React.useEffect(() => {
     if (status === 'unauthenticated') {
       setShowAuthPopup(true);
     }
   }, [status]);
-
-  React.useEffect(() => {
-    return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {});
-      }
-    };
-  }, [audioUrl]);
 
   const handleDismissPopup = () => {
     setShowAuthPopup(false);
@@ -153,153 +84,47 @@ export default function CitizenPortal() {
         setMicError('Microphone recording is not supported in this browser.');
         return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: false,
-          autoGainControl: true,
-        },
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
 
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const audioCtx = new AudioCtx({ sampleRate: 16000 });
-      audioContextRef.current = audioCtx;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
 
-      const source = audioCtx.createMediaStreamSource(stream);
-      audioSourceRef.current = source;
-
-      // Real-time volume meter for instant visual feedback
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const updateVolumeMeter = () => {
-        if (!mediaStreamRef.current) return;
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
-        const avg = sum / dataArray.length;
-        setMicVolumeLevel(Math.min(100, Math.round((avg / 128) * 100)));
-        animationFrameRef.current = requestAnimationFrame(updateVolumeMeter);
-      };
-      animationFrameRef.current = requestAnimationFrame(updateVolumeMeter);
-
-      // ScriptProcessor node for direct, uncompressed PCM audio capture
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-      audioProcessorRef.current = processor;
-      audioSamplesRef.current = [];
-
-      processor.onaudioprocess = (e) => {
-        const channelData = e.inputBuffer.getChannelData(0);
-        audioSamplesRef.current.push(new Float32Array(channelData));
       };
 
-      source.connect(processor);
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64Result = reader.result as string;
+          setAudioBase64(base64Result);
+        };
+      };
 
-      // Route through silent gain to avoid echo feedback
-      const muteGain = audioCtx.createGain();
-      muteGain.gain.value = 0;
-      processor.connect(muteGain);
-      muteGain.connect(audioCtx.destination);
-
+      recorder.start();
       setIsRecording(true);
-      setRecordingSeconds(0);
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
-      }, 1000);
     } catch (err: any) {
       console.error('Microphone access error:', err);
-      setMicError('Microphone access denied or unavailable. Please check your browser audio permissions.');
+      setMicError('Microphone access denied or unavailable. Please check browser permissions.');
       setIsRecording(false);
     }
   };
 
   const stopRecording = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
     }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
     }
-    setMicVolumeLevel(0);
     setIsRecording(false);
-
-    try {
-      if (audioProcessorRef.current) {
-        audioProcessorRef.current.disconnect();
-        audioProcessorRef.current = null;
-      }
-      if (audioSourceRef.current) {
-        audioSourceRef.current.disconnect();
-        audioSourceRef.current = null;
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        const sampleRate = audioContextRef.current.sampleRate || 16000;
-        audioContextRef.current.close().catch(() => {});
-        audioContextRef.current = null;
-
-        // Clean up microphone stream tracks
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-          mediaStreamRef.current = null;
-        }
-
-        // Merge collected PCM sample buffers
-        const chunks = audioSamplesRef.current;
-        let totalLen = 0;
-        for (const c of chunks) totalLen += c.length;
-
-        if (totalLen > 0) {
-          const merged = new Float32Array(totalLen);
-          let offset = 0;
-          for (const c of chunks) {
-            merged.set(c, offset);
-            offset += c.length;
-          }
-
-          // Calculate peak amplitude and normalize up to 85% for loud, crystal-clear playback
-          let maxAmp = 0;
-          for (let i = 0; i < merged.length; i++) {
-            const abs = Math.abs(merged[i]);
-            if (abs > maxAmp) maxAmp = abs;
-          }
-
-          if (maxAmp > 0.0001) {
-            const targetPeak = 0.85;
-            const boost = Math.min(targetPeak / maxAmp, 12.0); // Up to 12x boost for quiet laptop mics
-            for (let i = 0; i < merged.length; i++) {
-              merged[i] = Math.max(-1, Math.min(1, merged[i] * boost));
-            }
-          }
-
-          const wavBlob = encodeWAV(merged, sampleRate);
-          const blobUrl = URL.createObjectURL(wavBlob);
-          setAudioUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return blobUrl;
-          });
-
-          // Base64 data URL for backend speech ingestion
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64Result = reader.result as string;
-            setAudioBase64(base64Result);
-          };
-          reader.readAsDataURL(wavBlob);
-        } else {
-          setMicError('No sound detected from microphone. Please verify your microphone volume and speak clearly.');
-        }
-      }
-    } catch (err: any) {
-      console.error('Audio processing error:', err);
-    }
   };
 
   const toggleRecording = () => {
@@ -311,40 +136,7 @@ export default function CitizenPortal() {
   };
 
   const clearAudio = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-    }
-    setIsPlayingAudio(false);
-    setAudioUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
     setAudioBase64(null);
-    setRecordingSeconds(0);
-    setMicVolumeLevel(0);
-  };
-
-  const toggleAudioPlayback = () => {
-    if (!audioPlayerRef.current) return;
-    if (isPlayingAudio) {
-      audioPlayerRef.current.pause();
-      setIsPlayingAudio(false);
-    } else {
-      audioPlayerRef.current.currentTime = 0;
-      audioPlayerRef.current.volume = 1.0;
-      audioPlayerRef.current
-        .play()
-        .then(() => setIsPlayingAudio(true))
-        .catch((e) => console.error('Audio playback error:', e));
-    }
   };
 
   const handleLocationConfirmed = (loc: {
@@ -396,16 +188,6 @@ export default function CitizenPortal() {
       await stepDelay(800);
     };
 
-      let clientHash = "web_user_hash";
-      if (typeof window !== 'undefined') {
-        let storedId = localStorage.getItem('civicpulse_client_id');
-        if (!storedId) {
-          storedId = 'client_' + Math.random().toString(36).substring(2, 12);
-          localStorage.setItem('civicpulse_client_id', storedId);
-        }
-        clientHash = storedId;
-    }
-
     try {
       const [data] = await Promise.all([
         submitCitizenRequest({
@@ -417,15 +199,13 @@ export default function CitizenPortal() {
           locality: locality.trim() || undefined,
           latitude: pinnedLocation ? pinnedLocation.latitude : undefined,
           longitude: pinnedLocation ? pinnedLocation.longitude : undefined,
-          reporter_contact_hash: clientHash
+          reporter_contact_hash: "web_user_hash"
         }),
         runVisualSteps()
       ]);
-      setSubmitResult(data);
     } catch (err: any) {
-      await runVisualSteps().catch(() => { });
-      console.error("Citizen submission error:", err);
-      setSubmitError(err?.message || `Warning: Real-time API connection interrupted. Displaying preview.`);
+      await runVisualSteps().catch(() => {});
+      setSubmitError(`Warning: Real-time API connection interrupted. Displaying preview.`);
       // Mock fallback for UI demo if backend server offline
       setSubmitResult({
         status: "success",
@@ -555,22 +335,25 @@ export default function CitizenPortal() {
       <div className="flex border-b border-slate-800 mb-6 gap-2 sm:gap-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('submit')}
-          className={`pb-3 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'submit' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+          className={`pb-3 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'submit' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
           <Mic className="w-4 h-4" /> {t.tabSubmit}
         </button>
         <button
           onClick={() => setActiveTab('status')}
-          className={`pb-3 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'status' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+          className={`pb-3 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'status' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
           <Search className="w-4 h-4" /> {t.tabStatus}
         </button>
         <button
           onClick={() => setActiveTab('messaging')}
-          className={`pb-3 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'messaging' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+          className={`pb-3 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'messaging' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
           <MessageSquare className="w-4 h-4" /> {t.tabMessaging}
         </button>
@@ -588,40 +371,44 @@ export default function CitizenPortal() {
               <button
                 type="button"
                 onClick={() => setPreset('en', 'Our village road is completely broken and ambulances cannot reach during emergencies.')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${language === 'en'
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'en'
                     ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
                     : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
-                  }`}
+                }`}
               >
                 {t.presetEn}
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('hi', 'हमारे गांव में पिछले तीन साल से पीने का पानी नहीं आ रहा है। बच्चे बीमार हैं।')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${language === 'hi'
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'hi'
                     ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
                     : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
-                  }`}
+                }`}
               >
                 {t.presetHi}
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('mr', 'आमच्या गावातील रस्ता अत्यंत खराब झाला आहे, शाळा सुटल्यावर मुले घरी येऊ शकत नाहीत.')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${language === 'mr'
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'mr'
                     ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
                     : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
-                  }`}
+                }`}
               >
                 {t.presetMr}
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('pt', 'Nossa vila não tem água potável há três anos. As crianças estão sofrendo.')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${language === 'pt'
+                className={`px-3 py-1.5 rounded-lg text-xs transition border shadow-xs ${
+                  language === 'pt'
                     ? 'bg-cyan-600 text-white border-cyan-400 font-bold ring-2 ring-cyan-500/40'
                     : 'bg-slate-800/90 border-slate-700/80 text-slate-200 hover:bg-slate-700 hover:text-white'
-                  }`}
+                }`}
               >
                 {t.presetPt}
               </button>
@@ -746,52 +533,21 @@ export default function CitizenPortal() {
                 type="button"
                 onClick={toggleRecording}
                 aria-label={isRecording ? t.stopRecording : t.recordAudio}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs ${isRecording
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs ${
+                  isRecording
                     ? 'bg-red-600 text-white animate-pulse ring-2 ring-red-400'
                     : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
-                  }`}
+                }`}
               >
                 <Mic className="w-3.5 h-3.5 text-cyan-400" />
-                {isRecording
-                  ? `${t.stopRecording} (${String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:${String(recordingSeconds % 60).padStart(2, '0')})`
-                  : t.recordAudio}
+                {isRecording ? t.stopRecording : t.recordAudio}
               </button>
             </div>
-
-            {/* Live Visualizer Volume Meter while speaking */}
-            {isRecording && (
-              <div className="mb-3 p-3 bg-slate-900/90 border border-cyan-500/40 rounded-xl space-y-2 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                    <span className="text-xs font-semibold text-white">
-                      Recording Voice ({String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')})
-                    </span>
-                  </div>
-                  <span className="text-[11px] font-mono font-semibold text-cyan-300">
-                    Mic Input: {micVolumeLevel}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/80 p-0.5">
-                  <div
-                    className="bg-gradient-to-r from-cyan-500 via-emerald-400 to-amber-400 h-full rounded-full transition-all duration-75"
-                    style={{ width: `${Math.max(6, micVolumeLevel)}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Speak clearly into your microphone. The green/cyan level bar bounces live when voice is detected.
-                </p>
-              </div>
-            )}
-
-            {(audioUrl || audioBase64) && !isRecording && (
-              <div className="mb-3 p-3.5 bg-emerald-950/40 border border-emerald-700/60 rounded-xl space-y-2.5">
+            {audioBase64 && !isRecording && (
+              <div className="mb-3 p-3 bg-emerald-950/40 border border-emerald-700/60 rounded-xl space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="flex items-center gap-1.5 font-medium text-emerald-300 text-xs">
-                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" /> {t.audioRecorded} (WAV 16-bit Mastered)
+                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" /> {t.audioRecorded}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -815,41 +571,18 @@ export default function CitizenPortal() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-emerald-800/30 flex flex-col sm:flex-row sm:items-center gap-2.5">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                      <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-                      {t.reviewAudio}:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={toggleAudioPlayback}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow-sm transition"
-                    >
-                      {isPlayingAudio ? (
-                        <>
-                          <Pause className="w-3.5 h-3.5 text-white" /> Pause
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5 text-white" /> Play Audio
-                        </>
-                      )}
-                    </button>
-                  </div>
-
+                <div className="pt-2 border-t border-emerald-800/30 flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 shrink-0">
+                    <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                    {t.reviewAudio}:
+                  </span>
                   <audio
-                    ref={audioPlayerRef}
                     id="audio-review-player"
-                    key={audioUrl || audioBase64 || 'audio-ready'}
                     aria-label="Recorded audio playback"
                     controls
-                    src={audioUrl || audioBase64 || undefined}
-                    onEnded={() => setIsPlayingAudio(false)}
-                    onPause={() => setIsPlayingAudio(false)}
-                    onPlay={() => setIsPlayingAudio(true)}
+                    src={audioBase64}
                     className="w-full h-8 rounded-lg accent-cyan-500 bg-slate-900/90"
-                    preload="auto"
+                    preload="metadata"
                   >
                     Your browser does not support audio playback.
                   </audio>
@@ -954,12 +687,13 @@ export default function CitizenPortal() {
               </div>
               <div className="space-y-2">
                 {/* Step 1 */}
-                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${processingStep === 1
+                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 1
                     ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-200'
                     : processingStep > 1
-                      ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}>
+                    ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
+                    : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
+                }`}>
                   <div className="mt-0.5">
                     {processingStep > 1 ? (
                       <CheckCircle className="w-4 h-4 text-emerald-400" />
@@ -979,12 +713,13 @@ export default function CitizenPortal() {
                 </div>
 
                 {/* Step 2 */}
-                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${processingStep === 2
+                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 2
                     ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-200'
                     : processingStep > 2
-                      ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}>
+                    ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
+                    : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
+                }`}>
                   <div className="mt-0.5">
                     {processingStep > 2 ? (
                       <CheckCircle className="w-4 h-4 text-emerald-400" />
@@ -1004,12 +739,13 @@ export default function CitizenPortal() {
                 </div>
 
                 {/* Step 3 */}
-                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${processingStep === 3
+                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 3
                     ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-200'
                     : processingStep > 3
-                      ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}>
+                    ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
+                    : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
+                }`}>
                   <div className="mt-0.5">
                     {processingStep > 3 ? (
                       <CheckCircle className="w-4 h-4 text-emerald-400" />
@@ -1029,10 +765,11 @@ export default function CitizenPortal() {
                 </div>
 
                 {/* Step 4 */}
-                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${processingStep === 4
+                <div className={`p-2.5 rounded-lg border text-xs flex items-start gap-2.5 transition-all ${
+                  processingStep === 4
                     ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-200'
                     : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}>
+                }`}>
                   <div className="mt-0.5">
                     {processingStep === 4 ? (
                       <ShieldCheck className="w-4 h-4 text-cyan-400 animate-bounce" />
@@ -1175,12 +912,12 @@ export default function CitizenPortal() {
                 </span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs text-slate-300">
-                <div><span className="font-semibold text-slate-500">{t.statusCategory}</span> <br /><span className="text-white font-medium">{statusResult.category}</span></div>
-                <div><span className="font-semibold text-slate-500">{t.statusSubcategory}</span> <br /><span className="text-white font-medium">{statusResult.subcategory}</span></div>
-                <div><span className="font-semibold text-slate-500">{t.statusDistrict}</span> <br /><span className="text-white font-medium">{statusResult.district}</span></div>
-                <div><span className="font-semibold text-slate-500">{t.statusCluster}</span> <br /><span className="text-white font-medium">{statusResult.cluster_title}</span></div>
-                <div><span className="font-semibold text-slate-500">{t.statusMerged}</span> <br /><span className="text-cyan-400 font-bold">{statusResult.cluster_unique_requests} {t.reportsCount}</span></div>
-                <div><span className="font-semibold text-slate-500">{t.statusPriority}</span> <br /><span className="text-emerald-400 font-bold text-sm">{statusResult.cluster_priority_score} / 100</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusCategory}</span> <br/><span className="text-white font-medium">{statusResult.category}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusSubcategory}</span> <br/><span className="text-white font-medium">{statusResult.subcategory}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusDistrict}</span> <br/><span className="text-white font-medium">{statusResult.district}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusCluster}</span> <br/><span className="text-white font-medium">{statusResult.cluster_title}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusMerged}</span> <br/><span className="text-cyan-400 font-bold">{statusResult.cluster_unique_requests} {t.reportsCount}</span></div>
+                <div><span className="font-semibold text-slate-500">{t.statusPriority}</span> <br/><span className="text-emerald-400 font-bold text-sm">{statusResult.cluster_priority_score} / 100</span></div>
               </div>
 
               {statusResult.image_data && (

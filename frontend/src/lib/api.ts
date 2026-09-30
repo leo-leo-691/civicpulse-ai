@@ -212,7 +212,7 @@ import { getSession } from 'next-auth/react';
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-
+  
   let token = null;
   if (typeof window !== 'undefined') {
     const session = await getSession();
@@ -237,8 +237,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     try {
       const errorJson = await response.json();
       if (errorJson?.detail) {
-        errorDetail = typeof errorJson.detail === 'string'
-          ? errorJson.detail
+        errorDetail = typeof errorJson.detail === 'string' 
+          ? errorJson.detail 
           : JSON.stringify(errorJson.detail);
       }
     } catch {
